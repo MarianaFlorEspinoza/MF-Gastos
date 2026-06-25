@@ -475,6 +475,13 @@ function renderMariana(){
     tfoot+='<td style="'+(isCurM?'background:#B45309;color:#fff;':'')+'">S/ '+S(gTots[h]).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>';
   });
   tfoot+='<td class="total-col">S/ '+S(gTots['TOTAL']).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td></tr>';
+  // Add new gastos from Google Sheets to Mariana totals
+  if (gsNewVars.length > 0) {{
+    const note = document.createElement('div');
+    note.style.cssText = 'font-size:11px;color:var(--green-dark);padding:8px 18px;background:var(--green-bg);border-top:1px solid var(--border)';
+    note.innerHTML = '✓ ' + gsNewVars.length + ' gastos nuevos del celular incluidos en Presupuesto';
+    document.querySelector('#page-mariana .tbl-wrap').appendChild(note);
+  }}
   document.getElementById('mar-tfoot').innerHTML=tfoot;
 }
 
@@ -627,7 +634,7 @@ function renderPresupuesto(){
   const curM  = currentMonthLabel();
 
   // ── Summary cards (totals across current month) ───────────────
-  const gastosCur = PPTO_DATA.meses[curM]||{};
+  const gastosCur = getGastosMes(curM);
   let tR=0,tP=0,nOk=0,nWarn=0,nRed=0;
   Object.keys(ppto).sort().forEach(cat=>{
     const r=S(gastosCur[cat]||0), p=ppto[cat];
@@ -756,14 +763,72 @@ function showPptoDetail(cat, mes, ppto_val, real_val){
 }
 
 
+// ── GOOGLE SHEETS SYNC ──────────────────────────────────────────────
+const GS_API_URL = 'https://script.google.com/macros/s/AKfycbxgMFGqqIaZYKASH9kXDL019PsnQgQNwLuE2yOVo9AmfiU7BQZad--VguW72F4Ba1IW/exec';
+const GS_API_KEY = 'MF2026TabataFlor';
+let gsNewVars = [];  // nuevos gastos variables del celular
+
+async function syncFromSheets() {
+  const navInfo = document.getElementById('nav-info');
+  try {
+    const url = GS_API_URL + '?action=get_all&key=' + GS_API_KEY;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.ok) {
+      gsNewVars = data.variables || [];
+      const nNew = gsNewVars.length;
+      if (nNew > 0) {
+        navInfo.textContent = 'Datos: ' + DATA.generated + ' · Sincronizado ✓ · ' + nNew + ' gastos nuevos desde celular';
+        // Re-render affected sections
+        if (document.getElementById('page-presupuesto').classList.contains('active')) {
+          renderPresupuesto();
+        }
+        if (document.getElementById('page-mariana').classList.contains('active')) {
+          renderMariana();
+        }
+      } else {
+        navInfo.textContent = 'Datos: ' + DATA.generated + ' · Sincronizado ✓';
+      }
+    }
+  } catch(e) {
+    // Sin conexión — usar solo datos del Excel
+    console.log('Sin conexión a Google Sheets:', e.message);
+  }
+}
+
+// Merge histórico Excel + nuevos de Sheets para presupuesto
+function getGastosMes(mes) {
+  const ppto = PPTO_DATA.meses[mes] || {};
+  const gastos = {...ppto};
+  // Sumar gastos nuevos del celular para ese mes
+  gsNewVars.forEach(g => {
+    if (!g.cierre_ym) return;
+    const gMes = mesLabel(g.cierre_ym);
+    if (gMes !== mes) return;
+    const cat = g.categoria || 'SIN CATEGORÍA';
+    const monto = parseFloat(g.mariana_monto) || 0;
+    if (monto !== 0) gastos[cat] = (gastos[cat] || 0) + monto;
+  });
+  return gastos;
+}
+
+function mesLabel(ym) {
+  if (!ym) return '';
+  const MC = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
+  const [y, m] = ym.split('-');
+  return MC[parseInt(m)-1] + ' ' + y;
+}
+
 // ── INIT ─────────────────────────────────────────────────────────
 const now=new Date();
 document.getElementById('nav-info').textContent=
-  'Datos: '+DATA.generated+' · '+now.toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'});
+  'Datos: '+DATA.generated+' · '+now.toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'})+' · Sincronizando…';
 buildGary();
 buildMariana();
 buildPM();
 buildPresupuesto();
+// Sync Google Sheets in background
+syncFromSheets();
 </script>
 
 <!-- ═══ PRESUPUESTO ══════════════════════════════════════════════ -->
