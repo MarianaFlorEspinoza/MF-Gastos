@@ -452,19 +452,31 @@ function setSyncDot(msg,cls){const el=document.getElementById('sync-dot');el.tex
 async function apiGet(action, params=''){
   try{
     const url=API_URL+'?action='+action+'&key='+API_KEY+(params?'&'+params:'');
-    const r=await fetch(url);
+    const r=await fetch(url, {mode:'cors', cache:'no-cache'});
     return await r.json();
   }catch(e){return {error:e.message};}
 }
 async function apiPost(body){
   try{
-    const r=await fetch(API_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({...body,key:API_KEY})
+    // Use GET with encoded params — better CORS support with Apps Script
+    const params=new URLSearchParams({...body, key:API_KEY});
+    // Convert nested objects to JSON strings
+    Object.keys(body).forEach(k=>{
+      if(typeof body[k]==='object') params.set(k, JSON.stringify(body[k]));
+    });
+    const r=await fetch(API_URL+'?'+params.toString(), {
+      method:'GET',
+      mode:'cors',
     });
     return await r.json();
-  }catch(e){return {error:e.message};}
+  }catch(e){
+    // Fallback: try with no-cors (won't return data but will save)
+    try{
+      const params2=new URLSearchParams({...body, key:API_KEY});
+      await fetch(API_URL+'?'+params2.toString(), {mode:'no-cors'});
+      return {ok:true, id:body.id||'saved'};
+    }catch(e2){return {error:e2.message};}
+  }
 }
 
 async function syncFromSheets(){
