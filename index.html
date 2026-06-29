@@ -823,8 +823,8 @@ const MAR_OPEN=new Set(['Financiero','Hogar','Carro']);
 
 function renderMariana(){
   const CUR_LBL=mL(nowYM());
-  const WIN5=[-2,-1,0,1,2].map(off=>mL(addM(nowYM(),off)));
-  const CUR_IDX=2;
+  const WIN5=[-1,0,1].map(off=>mL(addM(nowYM(),off)));
+  const CUR_IDX=1;
 
   const lookup={};
   HISTORICO.mariana_rows.forEach(r=>{ lookup[r.nat+'|'+r.cat]=r; });
@@ -839,13 +839,21 @@ function renderMariana(){
   };
   function gVal(row,m){ return row?S(row[m]):0; }
 
-  // Header row (only show month abbreviation)
-  let html=`<div style="display:flex;align-items:center;padding:4px 6px 6px;border-bottom:2px solid var(--border2)">
-    <div style="flex:0 0 118px;font-size:9px;font-weight:600;color:var(--text2);text-transform:uppercase">Grupo / Cat.</div>
+  // Monthly Fijo / Variable totals for header
+  const moFijo=WIN5.map(m=>HISTORICO.mariana_rows.filter(r=>r.nat==='FIJO').reduce((s,r)=>s+S(r[m]),0));
+  const moVar =WIN5.map(m=>HISTORICO.mariana_rows.filter(r=>r.nat==='VARIABLE').reduce((s,r)=>s+S(r[m]),0));
+
+  // Header row
+  let html=`<div style="display:flex;align-items:flex-end;padding:4px 6px 0;border-bottom:2px solid var(--border2)">
+    <div style="flex:0 0 118px;font-size:9px;font-weight:600;color:var(--text2);text-transform:uppercase;padding-bottom:6px">Grupo / Cat.</div>
     ${WIN5.map((m,i)=>{
       const isCur=i===CUR_IDX;
       const lbl=m.split(' ')[0];
-      return `<div style="flex:1;text-align:right;font-size:9px;font-weight:700;color:${isCur?'var(--blue)':'var(--text2)'};text-transform:uppercase">${lbl}${isCur?' ◆':''}</div>`;
+      return `<div style="flex:1;text-align:right;background:${isCur?'#FFFBEB':'transparent'};padding:3px 3px 0">
+        <div style="font-size:8px;color:var(--blue-dk);font-family:var(--mono);line-height:1.5">F ${f2(moFijo[i])}</div>
+        <div style="font-size:8px;color:var(--green-dk);font-family:var(--mono);line-height:1.5">V ${f2(moVar[i])}</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;margin-top:3px;padding:2px 3px;background:${isCur?'#B45309':'transparent'};color:${isCur?'#fff':'var(--text2)'};">${lbl}${isCur?' ★':''}</div>
+      </div>`;
     }).join('')}
   </div>`;
 
@@ -855,14 +863,14 @@ function renderMariana(){
     },0));
     const isOpen=MAR_OPEN.has(g.name);
 
-    html+=`<div onclick="marToggle('${g.name}')" style="display:flex;align-items:center;padding:7px 6px;cursor:pointer;border-radius:8px;margin-top:3px;background:var(--bg3);border:1px solid var(--border)">
+    html+=`<div onclick="marToggle('${g.name}')" style="display:flex;align-items:center;padding:7px 6px;cursor:pointer;border-radius:8px;margin-top:4px;background:#334155;border:1px solid #1E3A5F" onmouseenter="this.style.background='#1E3A5F'" onmouseleave="this.style.background='#334155'">
       <span style="font-size:14px;margin-right:5px;flex-shrink:0">${g.icon}</span>
-      <div style="flex:0 0 94px;font-size:12px;font-weight:600;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</div>
+      <div style="flex:0 0 90px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</div>
       ${sums.map((v,i)=>{
         const isCur=i===CUR_IDX;
-        return `<div style="flex:1;text-align:right;font-size:11px;font-weight:600;color:${isCur?'var(--blue-dk)':'var(--text2)'};font-family:var(--mono)">${f2(v)}</div>`;
+        return `<div style="flex:1;text-align:right;font-size:11px;font-weight:600;color:${isCur?'#FCD34D':'rgba(255,255,255,.85)'};font-family:var(--mono);background:${isCur?'rgba(180,83,9,.35)':'transparent'};border-radius:3px;padding:0 2px">${f2(v)}</div>`;
       }).join('')}
-      <span style="font-size:9px;color:var(--text3);margin-left:4px;flex-shrink:0;display:inline-block;transform:rotate(${isOpen?'90':'0'}deg)" id="mchev-${gi}">▶</span>
+      <span style="font-size:9px;color:rgba(255,255,255,.5);margin-left:4px;flex-shrink:0;display:inline-block;transform:rotate(${isOpen?'90':'0'}deg)" id="mchev-${gi}">▶</span>
     </div>
     <div id="msub-${gi}" style="display:${isOpen?'block':'none'};padding:2px 0 3px 20px">
       ${g.cats.map(c=>{
@@ -880,8 +888,9 @@ function renderMariana(){
             const isCur=i===CUR_IDX;
             const over=isCur&&lim>0&&v>lim;
             const color=over?'var(--red)':isCur?'var(--navy)':'var(--text2)';
-            if(!v) return `<div style="flex:1;text-align:right;font-size:10px;color:var(--text3)">—</div>`;
-            return `<div style="flex:1;text-align:right;font-size:10px;font-weight:${over?700:400};color:${color};font-family:var(--mono)">${f2(v)}</div>`;
+            const yBg=isCur?'#FFFBEB':'transparent';
+            if(!v) return `<div style="flex:1;text-align:right;font-size:10px;color:var(--text3);background:${yBg}">—</div>`;
+            return `<div style="flex:1;text-align:right;font-size:10px;font-weight:${over?700:400};color:${color};font-family:var(--mono);background:${yBg}">${f2(v)}</div>`;
           }).join('')}
         </div>`;
       }).filter(Boolean).join('')}
@@ -895,7 +904,7 @@ function renderMariana(){
     <div style="flex:0 0 118px;font-size:11px;font-weight:700;color:var(--navy)">Total general</div>
     ${totals.map((v,i)=>{
       const isCur=i===CUR_IDX;
-      return `<div style="flex:1;text-align:right;font-size:11px;font-weight:700;color:${isCur?'var(--blue-dk)':'var(--navy)'};font-family:var(--mono)">${f2(v)}</div>`;
+      return `<div style="flex:1;text-align:right;font-size:11px;font-weight:700;color:${isCur?'var(--blue-dk)':'var(--navy)'};font-family:var(--mono);background:${isCur?'#FFFBEB':'transparent'}">${f2(v)}</div>`;
     }).join('')}
   </div>`;
 }
