@@ -358,15 +358,8 @@ td.zero{color:var(--text3)}
 
       <!-- Mariana -->
       <div id="rep-mariana" class="rep-content" style="display:none">
-        <div class="sum-row" id="mar-cards"></div>
-        <div class="filter-row">
-          <button class="btn-sm" onclick="setMarFil('all',this)" style="background:var(--navy2);color:#fff;border-color:var(--navy2)">Todo</button>
-          <button class="btn-sm" onclick="setMarFil('FIJO',this)">Fijo</button>
-          <button class="btn-sm" onclick="setMarFil('VARIABLE',this)">Variable</button>
-        </div>
-        <div class="tbl-wrap card" style="padding:0;overflow:hidden">
-          <table><thead id="mar-thead"></thead><tbody id="mar-tbody"></tbody></table>
-        </div>
+        <div id="mar-content"></div>
+        <div id="mar-total" style="margin-top:6px"></div>
       </div>
 
       <!-- Gary -->
@@ -794,41 +787,122 @@ function renderPpto(){
 }
 
 // Mariana
-function setMarFil(f,btn){marFil=f;document.querySelectorAll('#rep-mariana .btn-sm').forEach(b=>{b.style.background='';b.style.color='';b.style.borderColor='';}); btn.style.background='var(--navy2)';btn.style.color='#fff';btn.style.borderColor='var(--navy2)';renderMariana();}
+const MAR_GRUPOS=[
+  {name:'Financiero',icon:'💳',cats:[
+    {n:'FIJO',c:'PRESTAMO'},{n:'FIJO',c:'IMPUESTO'},{n:'FIJO',c:'SEGURO'},{n:'FIJO',c:'SERVICIOS'},
+    {n:'VARIABLE',c:'SERVICIOS'}
+  ]},
+  {name:'Hogar',icon:'🏠',cats:[
+    {n:'FIJO',c:'CASA VARIOS'},{n:'FIJO',c:'NANA'},
+    {n:'VARIABLE',c:'CASA SUPER'},{n:'VARIABLE',c:'CASA VARIOS'},{n:'VARIABLE',c:'COCINA'},{n:'VARIABLE',c:'NANA'}
+  ]},
+  {name:'Carro',icon:'🚗',cats:[
+    {n:'FIJO',c:'CARRO - PRESTAMO'},{n:'FIJO',c:'CARRO - SEGURO'},
+    {n:'VARIABLE',c:'CARRO - COCHERA'},{n:'VARIABLE',c:'CARRO - GASOLINA'},
+    {n:'VARIABLE',c:'CARRO - LIMPIEZA'},{n:'VARIABLE',c:'CARRO - MANT'},{n:'VARIABLE',c:'CARRO - TALLER'}
+  ]},
+  {name:'Mamá',icon:'👩',cats:[
+    {n:'FIJO',c:'PENSION MAMA'},{n:'VARIABLE',c:'PENSION MAMA'}
+  ]},
+  {name:'Educación',icon:'📚',cats:[
+    {n:'FIJO',c:'COLEGIO'},{n:'FIJO',c:'ESTUDIOS'},{n:'VARIABLE',c:'COLEGIO'}
+  ]},
+  {name:'Personal',icon:'💅',cats:[
+    {n:'FIJO',c:'DEPORTE'},{n:'FIJO',c:'EGO'},{n:'FIJO',c:'FOTOGRAFIA'},
+    {n:'VARIABLE',c:'EGO'},{n:'VARIABLE',c:'FOTOGRAFIA'},{n:'VARIABLE',c:'LAPTOP'},{n:'VARIABLE',c:'SALUD'}
+  ]},
+  {name:'Salidas',icon:'🍽️',cats:[
+    {n:'VARIABLE',c:'RESTAURANTE'},{n:'VARIABLE',c:'SALIDA'},
+    {n:'VARIABLE',c:'STARBUCKS'},{n:'VARIABLE',c:'TAXI'}
+  ]},
+  {name:'Regalos y eventos',icon:'🎁',cats:[
+    {n:'FIJO',c:'DONACION'},{n:'VARIABLE',c:'CUMPLE'},{n:'VARIABLE',c:'REGALO'}
+  ]}
+];
+const MAR_OPEN=new Set(['Financiero','Hogar','Carro']);
+
 function renderMariana(){
-  const hdrs=HISTORICO.mariana_headers;
-  const tots=HISTORICO.mariana_totals;
-  const rows=HISTORICO.mariana_rows.filter(r=>marFil==='all'||r.nat===marFil);
-  document.getElementById('mar-cards').innerHTML=`
-    <div class="scard"><div class="scard-lbl">Total 2026</div><div class="scard-val" style="font-size:17px">${fmt(tots['TOTAL'])}</div><div class="scard-sub">${rows.length} categorías</div></div>
-    <div class="scard"><div class="scard-lbl">Jun 2026 ★</div><div class="scard-val amber" style="font-size:17px">${fmt(tots['Jun 2026'])}</div></div>`;
+  const CUR_LBL=mL(nowYM());
+  const WIN5=[-2,-1,0,1,2].map(off=>mL(addM(nowYM(),off)));
+  const CUR_IDX=2;
 
-  // Show only current month and previous month on mobile
-  const curM2=mL(nowYM()), prevM2=mL(addM(nowYM(),-1));
-  const visHdrs=hdrs.filter(h=>h===curM2||h===prevM2);
-  const curM=mL(nowYM());
-  document.getElementById('mar-thead').innerHTML=`<tr>
-    <th class="left" style="min-width:120px;position:sticky;left:0;z-index:5">Categoría</th>
-    ${visHdrs.map(h=>`<th style="min-width:68px;${h===curM?'background:#B45309;':''}">${h.split(' ')[0]}${h===curM?' ★':''}</th>`).join('')}
-    <th>Total</th></tr>`;
+  const lookup={};
+  HISTORICO.mariana_rows.forEach(r=>{ lookup[r.nat+'|'+r.cat]=r; });
 
-  const groups={};rows.forEach(r=>{if(!groups[r.nat])groups[r.nat]=[];groups[r.nat].push(r);});
-  let html='';
-  ['FIJO','VARIABLE'].forEach(nat=>{
-    if(!groups[nat])return;
-    const isF=nat==='FIJO';
-    const bg=isF?'#F4F8FF':'#F4FBF7';
-    let first=true;
-    groups[nat].forEach(r=>{
-      html+=`<tr style="background:${bg}">
-        <td class="txt" style="position:sticky;left:0;background:${bg};font-size:12px;font-weight:500">${first?`<span class="badge ${isF?'badge-fijo':'badge-var'}" style="margin-right:4px">${nat.slice(0,1)}</span>`:''}${r.cat}</td>
-        ${visHdrs.map(h=>{const v=S(r[h]||0);const isCur=h===curM;const yst=isCur?'background:#FFFBEB;':'';if(v===0)return`<td class="zero" style="${yst}">—</td>`;if(v<0)return`<td class="neg" style="${yst}">${fmt(v)}</td>`;return`<td style="${yst}">S/ ${v.toLocaleString('es-PE',{minimumFractionDigits:0})}</td>`;  }).join('')}
-        <td style="font-weight:700">${fmt(r.total)}</td>
-      </tr>`;
-      first=false;
-    });
+  const PPTO=Object.assign({},HISTORICO.ppto.presupuesto,{
+    'PENSION MAMA': HISTORICO.ppto.presupuesto['PENSION MAMA 50%']||0
   });
-  document.getElementById('mar-tbody').innerHTML=html;
+
+  const f2=v=>{
+    const n=S(v); if(!n) return '—';
+    return 'S/'+Math.abs(Math.round(n)).toLocaleString('es-PE');
+  };
+  function gVal(row,m){ return row?S(row[m]):0; }
+
+  // Header row (only show month abbreviation)
+  let html=`<div style="display:flex;align-items:center;padding:4px 6px 6px;border-bottom:2px solid var(--border2)">
+    <div style="flex:0 0 118px;font-size:9px;font-weight:600;color:var(--text2);text-transform:uppercase">Grupo / Cat.</div>
+    ${WIN5.map((m,i)=>{
+      const isCur=i===CUR_IDX;
+      const lbl=m.split(' ')[0];
+      return `<div style="flex:1;text-align:right;font-size:9px;font-weight:700;color:${isCur?'var(--blue)':'var(--text2)'};text-transform:uppercase">${lbl}${isCur?' ◆':''}</div>`;
+    }).join('')}
+  </div>`;
+
+  MAR_GRUPOS.forEach((g,gi)=>{
+    const sums=WIN5.map(m=>g.cats.reduce((s,c)=>{
+      const r=lookup[c.n+'|'+c.c]; return s+gVal(r,m);
+    },0));
+    const isOpen=MAR_OPEN.has(g.name);
+
+    html+=`<div onclick="marToggle('${g.name}')" style="display:flex;align-items:center;padding:7px 6px;cursor:pointer;border-radius:8px;margin-top:3px;background:var(--bg3);border:1px solid var(--border)">
+      <span style="font-size:14px;margin-right:5px;flex-shrink:0">${g.icon}</span>
+      <div style="flex:0 0 94px;font-size:12px;font-weight:600;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</div>
+      ${sums.map((v,i)=>{
+        const isCur=i===CUR_IDX;
+        return `<div style="flex:1;text-align:right;font-size:11px;font-weight:600;color:${isCur?'var(--blue-dk)':'var(--text2)'};font-family:var(--mono)">${f2(v)}</div>`;
+      }).join('')}
+      <span style="font-size:9px;color:var(--text3);margin-left:4px;flex-shrink:0;display:inline-block;transform:rotate(${isOpen?'90':'0'}deg)" id="mchev-${gi}">▶</span>
+    </div>
+    <div id="msub-${gi}" style="display:${isOpen?'block':'none'};padding:2px 0 3px 20px">
+      ${g.cats.map(c=>{
+        const r=lookup[c.n+'|'+c.c];
+        const lim=c.n==='VARIABLE'?(PPTO[c.c]||0):0;
+        const vals=WIN5.map(m=>gVal(r,m));
+        if(vals.every(v=>!v)) return '';
+        return `<div style="display:flex;align-items:flex-start;padding:4px 6px;border-radius:4px" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background='transparent'">
+          <span style="font-size:8px;padding:1px 4px;border-radius:8px;font-weight:700;flex-shrink:0;margin-right:4px;margin-top:2px;line-height:1.5;background:${c.n==='FIJO'?'var(--blue-bg)':'var(--green-bg)'};color:${c.n==='FIJO'?'var(--blue-dk)':'var(--green-dk)'}">${c.n==='FIJO'?'F':'V'}</span>
+          <div style="flex:0 0 86px;min-width:0">
+            <div style="font-size:10px;color:var(--text2);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.c}</div>
+            ${lim?`<div style="font-size:9px;color:var(--text3)">máx S/${lim.toLocaleString('es-PE')}</div>`:''}
+          </div>
+          ${vals.map((v,i)=>{
+            const isCur=i===CUR_IDX;
+            const over=isCur&&lim>0&&v>lim;
+            const color=over?'var(--red)':isCur?'var(--navy)':'var(--text2)';
+            if(!v) return `<div style="flex:1;text-align:right;font-size:10px;color:var(--text3)">—</div>`;
+            return `<div style="flex:1;text-align:right;font-size:10px;font-weight:${over?700:400};color:${color};font-family:var(--mono)">${f2(v)}</div>`;
+          }).join('')}
+        </div>`;
+      }).filter(Boolean).join('')}
+    </div>`;
+  });
+
+  document.getElementById('mar-content').innerHTML=html;
+
+  const totals=WIN5.map(m=>HISTORICO.mariana_rows.reduce((s,r)=>s+S(r[m]),0));
+  document.getElementById('mar-total').innerHTML=`<div style="display:flex;align-items:center;padding:8px 6px;border-top:2px solid var(--border2);background:var(--blue-bg);border-radius:var(--radius-sm)">
+    <div style="flex:0 0 118px;font-size:11px;font-weight:700;color:var(--navy)">Total general</div>
+    ${totals.map((v,i)=>{
+      const isCur=i===CUR_IDX;
+      return `<div style="flex:1;text-align:right;font-size:11px;font-weight:700;color:${isCur?'var(--blue-dk)':'var(--navy)'};font-family:var(--mono)">${f2(v)}</div>`;
+    }).join('')}
+  </div>`;
+}
+
+function marToggle(name){
+  if(MAR_OPEN.has(name)) MAR_OPEN.delete(name); else MAR_OPEN.add(name);
+  renderMariana();
 }
 
 // Gary
