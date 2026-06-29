@@ -842,26 +842,30 @@ function renderMariana(){
   const moFijo=WIN5.map(m=>HISTORICO.mariana_rows.filter(r=>r.nat==='FIJO').reduce((s,r)=>s+S(r[m]),0));
   const moVar =WIN5.map(m=>HISTORICO.mariana_rows.filter(r=>r.nat==='VARIABLE').reduce((s,r)=>s+S(r[m]),0));
 
-  // Header row
-  const totStyle='font-size:11px;font-weight:700;color:var(--navy);font-family:var(--mono);line-height:1.8;background:#EFF6FF;border-top:2px solid var(--border2);border-bottom:1px solid var(--border2);padding:2px 3px;margin-top:3px';
-  const subStyle='font-size:10px;font-weight:600;color:var(--text2);font-family:var(--mono);line-height:1.7;padding:1px 3px';
-  let html=`<div style="display:flex;align-items:flex-end;padding:4px 6px 0;border-bottom:2px solid var(--border2)">
-    <div style="flex:0 0 118px;padding-bottom:6px">
-      <div style="font-size:9px;font-weight:600;color:var(--text2);text-transform:uppercase">Grupo / Cat.</div>
-      <div style="${totStyle}">Total</div>
-      <div style="${subStyle}">F</div>
-      <div style="${subStyle};margin-bottom:3px">V</div>
-    </div>
+  // Header: mes arriba + filas Total / Fijos / Variables
+  let html=`
+  <div style="display:flex;align-items:center;padding:4px 6px 3px">
+    <div style="flex:0 0 118px;font-size:9px;font-weight:600;color:var(--text2);text-transform:uppercase">Grupo / Cat.</div>
+    ${WIN5.map((m,i)=>{const isCur=i===CUR_IDX;const lbl=m.split(' ')[0];
+      return `<div style="flex:1;text-align:right;font-size:9px;font-weight:700;text-transform:uppercase;padding:2px 3px;background:${isCur?'#B45309':'transparent'};color:${isCur?'#fff':'var(--text2)'};">${lbl}${isCur?' ★':''}</div>`;
+    }).join('')}
+  </div>
+  <div style="display:flex;align-items:center;padding:2px 6px;background:#EFF6FF;border-top:2px solid var(--border2);border-bottom:2px solid var(--border2)">
+    <div style="flex:0 0 118px;font-size:11px;font-weight:700;color:var(--navy);padding:1px 3px">Total</div>
+    ${WIN5.map((m,i)=>{const tot=moFijo[i]+moVar[i];
+      return `<div style="flex:1;text-align:right;font-size:11px;font-weight:700;color:var(--navy);font-family:var(--mono);padding:1px 3px">${f2(tot)}</div>`;
+    }).join('')}
+  </div>
+  <div style="display:flex;align-items:center;padding:2px 6px;background:#DBEAFE;border-bottom:1px solid #BFDBFE">
+    <div style="flex:0 0 118px;font-size:10px;font-weight:600;color:var(--blue-dk);padding:1px 3px">Fijos</div>
     ${WIN5.map((m,i)=>{
-      const isCur=i===CUR_IDX;
-      const lbl=m.split(' ')[0];
-      const tot=moFijo[i]+moVar[i];
-      return `<div style="flex:1;text-align:right;background:${isCur?'#FFFBEB':'transparent'};padding:3px 3px 0">
-        <div style="${totStyle}">${f2(tot)}</div>
-        <div style="${subStyle}">${f2(moFijo[i])}</div>
-        <div style="${subStyle};margin-bottom:3px">${f2(moVar[i])}</div>
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;padding:2px 3px;background:${isCur?'#B45309':'var(--bg3)'};color:${isCur?'#fff':'var(--text2)'};">${lbl}${isCur?' ★':''}</div>
-      </div>`;
+      return `<div style="flex:1;text-align:right;font-size:10px;font-weight:600;color:var(--blue-dk);font-family:var(--mono);padding:1px 3px">${f2(moFijo[i])}</div>`;
+    }).join('')}
+  </div>
+  <div style="display:flex;align-items:center;padding:2px 6px;background:#D1FAE5;border-bottom:2px solid var(--border2);margin-bottom:4px">
+    <div style="flex:0 0 118px;font-size:10px;font-weight:600;color:var(--green-dk);padding:1px 3px">Variables</div>
+    ${WIN5.map((m,i)=>{
+      return `<div style="flex:1;text-align:right;font-size:10px;font-weight:600;color:var(--green-dk);font-family:var(--mono);padding:1px 3px">${f2(moVar[i])}</div>`;
     }).join('')}
   </div>`;
 
