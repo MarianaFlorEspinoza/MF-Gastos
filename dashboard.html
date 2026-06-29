@@ -514,9 +514,10 @@ function buildPM(){
       <div onclick="pmToggle(${mi})" style="display:flex;align-items:center;padding:10px 14px;cursor:pointer;background:${isCur?'#B45309':'#334155'};user-select:none">
         <div style="flex:1">
           <div style="font-size:13px;font-weight:700;color:#fff">${mes}${isCur?' ★':''}</div>
-          ${entry?`<div style="display:flex;gap:14px;margin-top:4px">
+          ${entry?`<div style="display:flex;gap:14px;margin-top:4px;flex-wrap:wrap">
             <span style="font-size:11px;color:${isCur?'#BFDBFE':'rgba(255,255,255,.55)'}">Fijos: <b style="font-family:var(--mono,monospace)">${f2(tFijo)}</b></span>
             <span style="font-size:11px;color:${isCur?'#BBF7D0':'rgba(255,255,255,.55)'}">Variables: <b style="font-family:var(--mono,monospace)">${f2(tVar)}</b></span>
+            <span style="font-size:11px;color:${isCur?'#FDE68A':'rgba(255,220,100,.7)'}">Hermano (50%): <b style="font-family:var(--mono,monospace)">${f2(S(entry.total_tercero)*0.5)}</b></span>
           </div>`:''}
         </div>
         <div style="text-align:right;margin-right:10px">
