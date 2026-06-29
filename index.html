@@ -979,9 +979,10 @@ function renderPension(){
       <div onclick="pmToggle(${mi})" style="display:flex;align-items:center;padding:10px 12px;cursor:pointer;background:${isCur?'#B45309':'#334155'};user-select:none">
         <div style="flex:1">
           <div style="font-size:13px;font-weight:700;color:#fff">${mes}${isCur?' ★':''}</div>
-          ${entry?`<div style="display:flex;gap:10px;margin-top:3px">
+          ${entry?`<div style="display:flex;gap:10px;margin-top:3px;flex-wrap:wrap">
             <span style="font-size:10px;color:${isCur?'#BFDBFE':'rgba(255,255,255,.55)'}">F: <b style="font-family:var(--mono)">${f2(tFijo)}</b></span>
             <span style="font-size:10px;color:${isCur?'#BBF7D0':'rgba(255,255,255,.55)'}">V: <b style="font-family:var(--mono)">${f2(tVar)}</b></span>
+            <span style="font-size:10px;color:${isCur?'#FDE68A':'rgba(255,220,100,.7)'}">Hno: <b style="font-family:var(--mono)">${f2(S(entry.total_tercero)*0.5)}</b></span>
           </div>`:''}
         </div>
         <div style="text-align:right;margin-right:8px">
