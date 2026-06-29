@@ -960,10 +960,10 @@ function renderPension(){
       if(!items.length) return '';
       const gTotal=items.reduce((s,it)=>s+S(it.total),0);
       return `<div style="border-top:1px solid var(--border)">
-        <div style="display:flex;align-items:center;padding:6px 12px 6px 14px;background:var(--bg3)">
+        <div style="display:flex;align-items:center;padding:6px 12px 6px 14px;background:${isCur?'#FFFBEB':'#F1F5F9'}">
           <span style="font-size:13px;margin-right:6px">${g.icon}</span>
-          <div style="flex:1;font-size:12px;font-weight:600;color:var(--navy)">${g.name}</div>
-          <div style="font-size:12px;font-weight:700;color:var(--navy);font-family:var(--mono)">${f2(gTotal)}</div>
+          <div style="flex:1;font-size:12px;font-weight:600;color:${isCur?'#92400E':'var(--navy)'}">${g.name}</div>
+          <div style="font-size:12px;font-weight:700;color:${isCur?'#92400E':'var(--navy)'};font-family:var(--mono)">${f2(gTotal)}</div>
         </div>
         ${items.map(it=>`<div style="display:flex;align-items:center;padding:4px 12px 4px 32px">
           <span style="font-size:9px;padding:1px 3px;border-radius:8px;font-weight:700;flex-shrink:0;margin-right:5px;background:${it.nat==='FIJO'?'var(--blue-bg)':'var(--green-bg)'};color:${it.nat==='FIJO'?'var(--blue-dk)':'var(--green-dk)'}">${it.nat==='FIJO'?'F':'V'}</span>
