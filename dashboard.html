@@ -495,10 +495,10 @@ function buildPM(){
       if(!items.length) return '';
       const gTotal=items.reduce((s,it)=>s+S(it.total),0);
       return `<div style="border-top:1px solid var(--border)">
-        <div style="display:flex;align-items:center;padding:7px 14px 7px 18px;background:#F8FAFC">
+        <div style="display:flex;align-items:center;padding:7px 14px 7px 18px;background:${isCur?'#FFFBEB':'#F1F5F9'}">
           <span style="font-size:14px;margin-right:7px">${g.icon}</span>
-          <div style="flex:1;font-size:12px;font-weight:600;color:var(--navy)">${g.name}</div>
-          <div style="font-size:12px;font-weight:700;color:var(--navy);font-family:var(--mono,monospace)">${f2(gTotal)}</div>
+          <div style="flex:1;font-size:12px;font-weight:600;color:${isCur?'#92400E':'var(--navy)'}">${g.name}</div>
+          <div style="font-size:12px;font-weight:700;color:${isCur?'#92400E':'var(--navy)'};font-family:var(--mono,monospace)">${f2(gTotal)}</div>
         </div>
         ${items.map(it=>`<div style="display:flex;align-items:center;padding:3px 14px 3px 40px" onmouseenter="this.style.background='var(--ice)'" onmouseleave="this.style.background='transparent'">
           <span style="font-size:9px;padding:1px 4px;border-radius:8px;font-weight:700;flex-shrink:0;margin-right:6px;background:${it.nat==='FIJO'?'var(--blue-bg)':'var(--green-bg)'};color:${it.nat==='FIJO'?'var(--blue-dark)':'var(--green-dark)'}">${it.nat==='FIJO'?'F':'V'}</span>
