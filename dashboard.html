@@ -213,28 +213,11 @@ tr.current-month:hover td { background:#FEF3C7 !important; }
 <!-- ═══ MARIANA ════════════════════════════════════════════════ -->
 <div class="page" id="page-mariana">
   <div class="page-header">
-    <div class="page-title">Mariana — Gastos 2026</div>
-    <div class="page-subtitle">Montos reales asignados a Mariana por naturaleza y categoría. Columnas = meses del año. Las devoluciones aparecen en rojo.</div>
+    <div class="page-title">Mariana — Gastos por grupo</div>
+    <div class="page-subtitle">Agrupado por tipo de gasto · Ventana de 5 meses centrada en el mes actual · F = Fijo · V = Variable · máx = límite presupuesto</div>
   </div>
-  <div class="summary-row" id="mar-summary"></div>
-  <div class="controls">
-    <button class="filter-btn active" onclick="setMarFil('all',this)">Todo</button>
-    <button class="filter-btn" onclick="setMarFil('FIJO',this)">Solo Fijo</button>
-    <button class="filter-btn" onclick="setMarFil('VARIABLE',this)">Solo Variable</button>
-  </div>
-  <div class="tbl-wrap">
-    <div class="tbl-header">
-      <span class="tbl-title">Por naturaleza y categoría</span>
-      <span class="tbl-count" id="mar-count">—</span>
-    </div>
-    <div class="pivot-wrap">
-      <table>
-        <thead id="mar-thead"></thead>
-        <tbody id="mar-tbody"></tbody>
-        <tfoot id="mar-tfoot"></tfoot>
-      </table>
-    </div>
-  </div>
+  <div id="mar-content" style="max-width:860px"></div>
+  <div id="mar-total" style="max-width:860px;margin-top:6px"></div>
 </div>
 
 <!-- ═══ PENSIÓN MAMÁ ══════════════════════════════════════════ -->
@@ -314,158 +297,134 @@ function buildGary(){
 }
 
 // ── MARIANA ──────────────────────────────────────────────────────
-let marFil='all';
+const MAR_GRUPOS=[
+  {name:'Financiero',icon:'💳',cats:[
+    {n:'FIJO',c:'PRESTAMO'},{n:'FIJO',c:'IMPUESTO'},{n:'FIJO',c:'SEGURO'},{n:'FIJO',c:'SERVICIOS'},
+    {n:'VARIABLE',c:'SERVICIOS'}
+  ]},
+  {name:'Hogar',icon:'🏠',cats:[
+    {n:'FIJO',c:'CASA VARIOS'},{n:'FIJO',c:'NANA'},
+    {n:'VARIABLE',c:'CASA SUPER'},{n:'VARIABLE',c:'CASA VARIOS'},{n:'VARIABLE',c:'COCINA'},{n:'VARIABLE',c:'NANA'}
+  ]},
+  {name:'Carro',icon:'🚗',cats:[
+    {n:'FIJO',c:'CARRO - PRESTAMO'},{n:'FIJO',c:'CARRO - SEGURO'},
+    {n:'VARIABLE',c:'CARRO - COCHERA'},{n:'VARIABLE',c:'CARRO - GASOLINA'},
+    {n:'VARIABLE',c:'CARRO - LIMPIEZA'},{n:'VARIABLE',c:'CARRO - MANT'},{n:'VARIABLE',c:'CARRO - TALLER'}
+  ]},
+  {name:'Mamá',icon:'👩',cats:[
+    {n:'FIJO',c:'PENSION MAMA'},{n:'VARIABLE',c:'PENSION MAMA'}
+  ]},
+  {name:'Educación',icon:'📚',cats:[
+    {n:'FIJO',c:'COLEGIO'},{n:'FIJO',c:'ESTUDIOS'},{n:'VARIABLE',c:'COLEGIO'}
+  ]},
+  {name:'Personal',icon:'💅',cats:[
+    {n:'FIJO',c:'DEPORTE'},{n:'FIJO',c:'EGO'},{n:'FIJO',c:'FOTOGRAFIA'},
+    {n:'VARIABLE',c:'EGO'},{n:'VARIABLE',c:'FOTOGRAFIA'},{n:'VARIABLE',c:'LAPTOP'},{n:'VARIABLE',c:'SALUD'}
+  ]},
+  {name:'Salidas',icon:'🍽️',cats:[
+    {n:'VARIABLE',c:'RESTAURANTE'},{n:'VARIABLE',c:'SALIDA'},
+    {n:'VARIABLE',c:'STARBUCKS'},{n:'VARIABLE',c:'TAXI'}
+  ]},
+  {name:'Regalos y eventos',icon:'🎁',cats:[
+    {n:'FIJO',c:'DONACION'},{n:'VARIABLE',c:'CUMPLE'},{n:'VARIABLE',c:'REGALO'}
+  ]}
+];
+const MAR_OPEN=new Set(['Financiero','Hogar','Carro']);
 
 function buildMariana(){
-  // Filter headers: from 2 months before current month to end of current year
-  const now=new Date();
-  const curYear=now.getFullYear();
   const MC=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
-  const fromMonth=now.getMonth()-2; // 2 months back (can be negative)
-  // Build set of allowed month labels
-  const allowedHeaders=new Set();
-  DATA.mariana_headers.forEach(h=>{
-    const parts=h.split(' ');
-    const mIdx=MC.indexOf(parts[0]);
-    const yr=parseInt(parts[1]);
-    if(yr===curYear){
-      // include if month index >= fromMonth (fromMonth can be negative = prev year, always include those in range)
-      if(mIdx>=fromMonth) allowedHeaders.add(h);
-    }
+  const now=new Date();
+  const WIN5=[-2,-1,0,1,2].map(off=>{
+    const d=new Date(now.getFullYear(),now.getMonth()+off,1);
+    return MC[d.getMonth()]+' '+d.getFullYear();
   });
-  window._marHdrs=DATA.mariana_headers.filter(h=>allowedHeaders.has(h));
-  const hdrs=window._marHdrs||DATA.mariana_headers;
-  const tots=DATA.mariana_totals;
-  const rows=DATA.mariana_rows;
-  const tF=rows.filter(r=>r.nat==='FIJO').reduce((s,r)=>s+S(r.total),0);
-  const tV=rows.filter(r=>r.nat==='VARIABLE').reduce((s,r)=>s+S(r.total),0);
+  const CUR_LBL=currentMonthLabel();
+  const CUR_IDX=2;
 
-  document.getElementById('mar-summary').innerHTML=`
-    <div class="scard"><div class="scard-label">Total 2026</div>
-      <div class="scard-val">${fmtPlain(tots['TOTAL'])}</div>
-      <div class="scard-sub">${rows.length} categorías</div></div>
-    <div class="scard"><div class="scard-label">Gastos Fijos</div>
-      <div class="scard-val blue">${fmtPlain(tF)}</div></div>
-    <div class="scard"><div class="scard-label">Gastos Variables</div>
-      <div class="scard-val amber">${fmtPlain(tV)}</div></div>
-    ${hdrs.slice(0,4).map(h=>`
-      <div class="scard"><div class="scard-label">${h}</div>
-        <div class="scard-val" style="font-size:15px">${fmtPlain(tots[h])}</div></div>`).join('')}`;
+  // Lookup: "nat|cat" -> row
+  const lookup={};
+  DATA.mariana_rows.forEach(r=>{ lookup[r.nat+'|'+r.c]=r; lookup[r.nat+'|'+r.cat]=r; });
 
-  // Thead
-  document.getElementById('mar-thead').innerHTML=`<tr>
-    <th class="left" style="min-width:80px">Nat.</th>
-    <th class="left" style="min-width:180px">Categoría</th>
-    ${hdrs.map(h=>{
-    const isCurM=h===currentMonthLabel();
-    return `<th style="${isCurM?'background:#B45309;color:#fff;':''}">${h}${isCurM?' ★':''}</th>`;
-  }).join('')}
-    <th class="total-col" style="background:#0F1D35">TOTAL</th>
-  </tr>`;
-  renderMariana();
+  // Budget limits (ppto keyed by category name; PENSION MAMA uses "PENSION MAMA 50%")
+  const PPTO=Object.assign({},PPTO_DATA.presupuesto,{
+    'PENSION MAMA': PPTO_DATA.presupuesto['PENSION MAMA 50%']||0
+  });
+
+  const f2=v=>{
+    const n=S(v); if(!n) return '—';
+    return 'S/'+Math.abs(Math.round(n)).toLocaleString('es-PE');
+  };
+
+  function gVal(row,m){ return row?S(row[m]):0; }
+
+  // Column header row
+  let html=`<div style="display:flex;align-items:center;padding:4px 8px 6px;border-bottom:2px solid var(--border2)">
+    <div style="flex:0 0 186px;font-size:10px;font-weight:600;color:var(--slate2);text-transform:uppercase;letter-spacing:.05em">Grupo / Categoría</div>
+    ${WIN5.map((m,i)=>{
+      const isCur=i===CUR_IDX;
+      const lbl=m.split(' ')[0];
+      return `<div style="flex:1;text-align:right;font-size:10px;font-weight:700;color:${isCur?'var(--blue)':'var(--slate2)'};text-transform:uppercase;letter-spacing:.04em">${lbl}${isCur?' ◆':''}</div>`;
+    }).join('')}
+  </div>`;
+
+  MAR_GRUPOS.forEach((g,gi)=>{
+    // Group totals
+    const sums=WIN5.map(m=>g.cats.reduce((s,c)=>{
+      const r=lookup[c.n+'|'+c.c]; return s+gVal(r,m);
+    },0));
+    const isOpen=MAR_OPEN.has(g.name);
+
+    html+=`<div onclick="marToggle('${g.name}')" style="display:flex;align-items:center;padding:7px 8px;cursor:pointer;border-radius:6px;margin-top:2px;background:var(--ice);border:1px solid var(--border2)" onmouseenter="this.style.background='var(--bg)'" onmouseleave="this.style.background='var(--ice)'">
+      <span style="font-size:15px;margin-right:6px;flex-shrink:0">${g.icon}</span>
+      <div style="flex:0 0 158px;font-size:13px;font-weight:600;color:var(--navy)">${g.name}</div>
+      ${sums.map((v,i)=>{
+        const isCur=i===CUR_IDX;
+        return `<div style="flex:1;text-align:right;font-size:12px;font-weight:600;color:${isCur?'var(--blue-dark)':'var(--slate)'};font-family:var(--mono,monospace)">${f2(v)}</div>`;
+      }).join('')}
+      <span style="font-size:9px;color:var(--slate3);margin-left:6px;flex-shrink:0;display:inline-block;transform:rotate(${isOpen?'90':'0'}deg);transition:transform .15s" id="mchev-${gi}">▶</span>
+    </div>
+    <div id="msub-${gi}" style="display:${isOpen?'block':'none'};padding:2px 0 4px 28px">
+      ${g.cats.map(c=>{
+        const r=lookup[c.n+'|'+c.c];
+        const lim=c.n==='VARIABLE'?(PPTO[c.c]||0):0;
+        const vals=WIN5.map(m=>gVal(r,m));
+        if(vals.every(v=>!v)) return '';
+        const curVal=vals[CUR_IDX];
+        const isOver=lim>0&&curVal>lim;
+        return `<div style="display:flex;align-items:flex-start;padding:4px 8px;border-radius:4px;margin-top:1px" onmouseenter="this.style.background='var(--ice)'" onmouseleave="this.style.background='transparent'">
+          <span style="font-size:9px;padding:1px 4px;border-radius:8px;font-weight:700;flex-shrink:0;margin-right:5px;margin-top:2px;line-height:1.5;background:${c.n==='FIJO'?'var(--blue-bg)':'var(--green-bg)'};color:${c.n==='FIJO'?'var(--blue-dark)':'var(--green-dark)'}">${c.n==='FIJO'?'F':'V'}</span>
+          <div style="flex:0 0 134px;min-width:0">
+            <div style="font-size:11px;color:var(--slate);line-height:1.3">${c.c}</div>
+            ${lim?`<div style="font-size:10px;color:var(--slate2);margin-top:1px">máx S/${lim.toLocaleString('es-PE')}</div>`:''}
+          </div>
+          ${vals.map((v,i)=>{
+            const isCur=i===CUR_IDX;
+            const over=isCur&&lim>0&&v>lim;
+            const color=over?'var(--red)':isCur?'var(--navy)':'var(--slate)';
+            if(!v) return `<div style="flex:1;text-align:right;font-size:11px;color:var(--slate3)">—</div>`;
+            return `<div style="flex:1;text-align:right;font-size:11px;font-weight:${over?700:400};color:${color};font-family:var(--mono,monospace)">${f2(v)}</div>`;
+          }).join('')}
+        </div>`;
+      }).filter(Boolean).join('')}
+    </div>`;
+  });
+
+  document.getElementById('mar-content').innerHTML=html;
+
+  // Total general row
+  const totals=WIN5.map(m=>DATA.mariana_rows.reduce((s,r)=>s+S(r[m]),0));
+  document.getElementById('mar-total').innerHTML=`<div style="display:flex;align-items:center;padding:9px 8px;border-top:2px solid var(--border2);background:var(--ice2,#EFF6FF);border-radius:var(--radius)">
+    <div style="flex:0 0 186px;font-size:12px;font-weight:700;color:var(--navy)">Total general</div>
+    ${totals.map((v,i)=>{
+      const isCur=i===CUR_IDX;
+      return `<div style="flex:1;text-align:right;font-size:12px;font-weight:700;color:${isCur?'var(--blue-dark)':'var(--navy)'};font-family:var(--mono,monospace)">${f2(v)}</div>`;
+    }).join('')}
+  </div>`;
 }
 
-function renderMariana(){
-  const hdrs=window._marHdrs||DATA.mariana_headers;
-  const rows=DATA.mariana_rows.filter(r=>marFil==='all'||r.nat===marFil);
-  document.getElementById('mar-count').textContent=rows.length+' categorías';
-
-  const groups={};
-  rows.forEach(r=>{if(!groups[r.nat])groups[r.nat]=[];groups[r.nat].push(r);});
-
-  // Pre-compute subtotals
-  const subTots={};
-  ['FIJO','VARIABLE'].forEach(nat=>{
-    subTots[nat]={}; hdrs.forEach(h=>subTots[nat][h]=0); subTots[nat]['TOTAL']=0;
-    (groups[nat]||[]).forEach(r=>{ hdrs.forEach(h=>subTots[nat][h]+=S(r[h])); subTots[nat]['TOTAL']+=S(r.total); });
-  });
-  const gTots={}; hdrs.forEach(h=>gTots[h]=0); gTots['TOTAL']=0;
-  ['FIJO','VARIABLE'].forEach(nat=>{ hdrs.forEach(h=>gTots[h]+=subTots[nat][h]); gTots['TOTAL']+=subTots[nat]['TOTAL']; });
-
-  function cellVal(v, h, extraStyle){
-    const isCurM=h===currentMonthLabel();
-    const yst=isCurM?'background:#FEF3C7;':'';
-    const st=(extraStyle||'')+yst;
-    if(v===0) return '<td class="zero" style="'+st+'">—</td>';
-    if(v<0)   return '<td class="neg"  style="'+st+'">-'+fmtPlain(-v)+'</td>';
-    return '<td style="'+st+'">S/ '+v.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>';
-  }
-
-  // ── SUMMARY ROWS — pinned just below header ──────────────────
-  let html='';
-  ['FIJO','VARIABLE'].forEach(function(nat){
-    if(!groups[nat]||!groups[nat].length) return;
-    const isF=nat==='FIJO';
-    const nt=subTots[nat];
-    const bg=isF?'#C8DDE8':'#C8E8D4';
-    const fg=isF?'#1E3A8A':'#065F46';
-    let row='<tr style="background:'+bg+'">';
-    row+='<td class="nat-cell"><span class="badge '+(isF?'badge-fijo':'badge-var')+'">'+nat+'</span></td>';
-    row+='<td style="font-family:var(--font);font-weight:700;color:'+fg+'">Subtotal '+nat+'</td>';
-    hdrs.forEach(function(h){
-      const v=nt[h];
-      const isCurM=h===currentMonthLabel();
-      const yst=isCurM?'background:#FEF3C7;':'';
-      if(v===0){ row+='<td class="zero" style="'+yst+'font-weight:700;color:'+fg+'">—</td>'; return; }
-      if(v<0){   row+='<td class="neg"  style="'+yst+'font-weight:700;">-'+fmtPlain(-v)+'</td>'; return; }
-      row+='<td style="'+yst+'font-weight:700;color:'+fg+'">S/ '+v.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>';
-    });
-    row+='<td class="total-col" style="color:'+fg+';font-weight:700">S/ '+nt['TOTAL'].toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>';
-    row+='</tr>';
-    html+=row;
-  });
-
-  // Separator
-  html+='<tr><td colspan="'+(hdrs.length+3)+'" style="height:4px;background:#E2E8F0;padding:0"></td></tr>';
-
-  // ── DETAIL ROWS ──────────────────────────────────────────────
-  ['FIJO','VARIABLE'].forEach(function(nat){
-    if(!groups[nat]) return;
-    const isF=nat==='FIJO';
-    const rowBg=isF?'#F4F8FF':'#F4FBF7';
-    let first=true;
-    groups[nat].forEach(function(r){
-      let row='<tr style="background:'+rowBg+'">';
-      row+=first
-        ?'<td class="nat-cell"><span class="badge '+(isF?'badge-fijo':'badge-var')+'">'+nat+'</span></td>'
-        :'<td class="nat-cell"></td>';
-      row+='<td class="txt">'+r.cat+'</td>';
-      hdrs.forEach(function(h){
-        const v=S(r[h]);
-        const isCurM=h===currentMonthLabel();
-        const yst=isCurM?'background:#FFFBEB;':'';
-        if(v===0){ row+='<td class="zero" style="'+yst+'">—</td>'; return; }
-        if(v<0){   row+='<td class="neg"  style="'+yst+'">-'+fmtPlain(-v)+'</td>'; return; }
-        row+='<td style="'+yst+'">S/ '+v.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>';
-      });
-      row+='<td class="total-col '+(S(r.total)<0?'neg':'')+'">'+fmt(r.total)+'</td>';
-      row+='</tr>';
-      html+=row;
-      first=false;
-    });
-  });
-
-  document.getElementById('mar-tbody').innerHTML=html;
-  let tfoot='<tr><td colspan="2" style="text-align:left;font-family:var(--font)">TOTAL GENERAL</td>';
-  hdrs.forEach(function(h){
-    const isCurM=h===currentMonthLabel();
-    tfoot+='<td style="'+(isCurM?'background:#B45309;color:#fff;':'')+'">S/ '+S(gTots[h]).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>';
-  });
-  tfoot+='<td class="total-col">S/ '+S(gTots['TOTAL']).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td></tr>';
-  // Add new gastos from Google Sheets to Mariana totals
-  if (gsNewVars.length > 0) {{
-    const note = document.createElement('div');
-    note.style.cssText = 'font-size:11px;color:var(--green-dark);padding:8px 18px;background:var(--green-bg);border-top:1px solid var(--border)';
-    note.innerHTML = '✓ ' + gsNewVars.length + ' gastos nuevos del celular incluidos en Presupuesto';
-    document.querySelector('#page-mariana .tbl-wrap').appendChild(note);
-  }}
-  document.getElementById('mar-tfoot').innerHTML=tfoot;
-}
-
-function setMarFil(f,btn){
-  marFil=f;
-  document.querySelectorAll('#page-mariana .filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active'); renderMariana();
+function marToggle(name){
+  if(MAR_OPEN.has(name)) MAR_OPEN.delete(name); else MAR_OPEN.add(name);
+  buildMariana();
 }
 
 // ── PENSIÓN MAMÁ ─────────────────────────────────────────────────
