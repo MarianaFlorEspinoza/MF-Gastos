@@ -203,7 +203,6 @@ tr.current-month:hover td { background:#FEF3C7 !important; }
       <strong>Saldo</strong> = Gary PAGA − Mariana PAGA &nbsp;·&nbsp; Período: año en curso
     </div>
   </div>
-  <div class="summary-row" id="gary-summary"></div>
   <div class="controls">
     <input class="search-inp" type="text" placeholder="🔍 Buscar mes…" oninput="filterGary(this.value)">
   </div>
@@ -300,26 +299,6 @@ function currentMonthLabel(){
 let garyFil='all', garySearch='';
 
 function buildGary(){
-  const curYear=new Date().getFullYear().toString();
-  const rows=DATA.gary.filter(r=>r.mes.includes(curYear));
-  const tGP=rows.reduce((s,r)=>s+S(r.gary_paga),0);
-  const tMP=rows.reduce((s,r)=>s+S(r.mariana_paga),0);
-  const tSal=rows.reduce((s,r)=>s+S(r.saldo),0);
-  const nPos=rows.filter(r=>S(r.saldo)>0).length;
-  const nNeg=rows.filter(r=>S(r.saldo)<0).length;
-
-  document.getElementById('gary-summary').innerHTML=`
-    <div class="scard"><div class="scard-label">Gary PAGA — Total período</div>
-      <div class="scard-val">${fmtPlain(tGP)}</div>
-      <div class="scard-sub">${rows.length} meses (Ene 2024 – Dic 2026)</div></div>
-    <div class="scard"><div class="scard-label">Mariana PAGA — Total período</div>
-      <div class="scard-val amber">${fmtPlain(tMP)}</div></div>
-    <div class="scard"><div class="scard-label">Saldo neto</div>
-      <div class="scard-val ${tSal>=0?'green':'red'}">${fmtPlain(Math.abs(tSal))}</div>
-      <div class="scard-sub">${tSal>=0?'Gary le debe a Mariana':'Mariana pagó de más'}</div></div>
-    <div class="scard"><div class="scard-label">Meses con saldo a favor</div>
-      <div class="scard-val green">${nPos}</div>
-      <div class="scard-sub">${nNeg} meses Mariana pagó de más</div></div>`;
   renderGary();
 }
 
