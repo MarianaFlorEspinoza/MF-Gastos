@@ -605,39 +605,98 @@ function buildLimites() {
 
 function renderLimites(ppto) {
   const ETIQUETAS = {
-    'CARRO - COCHERA':'🚗 Cochera','CARRO - GASOLINA':'⛽ Gasolina','CARRO - MANT':'🔧 Mantenimiento auto',
-    'CARRO - TALLER':'🔩 Taller (extraordinario)','CASA SUPER':'🛒 Supermercado','CASA VARIOS':'🏡 Casa varios',
-    'COCINA':'🍳 Cocina','CUMPLE':'🎂 Cumpleaños (extraordinario)','EGO':'💅 Ego (belleza+ropa)',
-    'FOTOGRAFIA':'📷 Fotografía','LAPTOP':'💻 Laptop (extraordinario)','PENSION MAMA 50%':'👩 Pensión Mamá (50%)',
-    'PRESTAMO':'💳 Préstamo (extraordinario)','REGALO':'🎁 Regalos','RESTAURANTE':'🍽️ Restaurante',
-    'SALIDA':'🎉 Salidas','SALUD':'💊 Salud','SERVICIOS':'📡 Servicios (extraordinario)',
-    'STARBUCKS':'☕ Starbucks','TAXI':'🚕 Taxi'
+    'CARRO - COCHERA':'Cochera','CARRO - GASOLINA':'Gasolina','CARRO - LIMPIEZA':'Limpieza',
+    'CARRO - MANT':'Mantenimiento','CARRO - TALLER':'Taller','CARRO - PRESTAMO':'Préstamo auto',
+    'CARRO - SEGURO':'Seguro auto','CASA SUPER':'Supermercado','CASA VARIOS':'Casa varios',
+    'COCINA':'Cocina','NANA':'Nana','IMPUESTO':'Impuesto','SEGURO':'Seguro',
+    'CUMPLE':'Cumpleaños','EGO':'Ego (belleza + ropa)','FOTOGRAFIA':'Fotografía',
+    'LAPTOP':'Laptop','PENSION MAMA 50%':'Pensión Mamá (50%)','PRESTAMO':'Préstamo',
+    'REGALO':'Regalos','RESTAURANTE':'Restaurante','SALIDA':'Salidas',
+    'SALUD':'Salud','SERVICIOS':'Servicios','STARBUCKS':'Starbucks','TAXI':'Taxi',
+    'COLEGIO':'Colegio','UNIVERSIDAD':'Universidad','EDUCACION':'Educación'
   };
-  const EXTRAORDINARIOS = ['CARRO - TALLER','CUMPLE','LAPTOP','PRESTAMO','SERVICIOS'];
+  const EXTRA = new Set(['CARRO - TALLER','CUMPLE','LAPTOP','PRESTAMO','SERVICIOS']);
+  const GRUPOS = [
+    {name:'Financiero', icon:'💳', cats:['PRESTAMO','IMPUESTO','SEGURO']},
+    {name:'Hogar',      icon:'🏠', cats:['SERVICIOS','CASA SUPER','CASA VARIOS','COCINA','NANA']},
+    {name:'Carro',      icon:'🚗', cats:['CARRO - PRESTAMO','CARRO - SEGURO','CARRO - COCHERA','CARRO - GASOLINA','CARRO - LIMPIEZA','CARRO - MANT','CARRO - TALLER']},
+    {name:'Mamá',       icon:'👩', cats:['PENSION MAMA 50%']},
+    {name:'Educación',  icon:'📚', cats:['COLEGIO','UNIVERSIDAD','EDUCACION','LAPTOP']},
+    {name:'Personal',   icon:'💆', cats:['EGO','SALUD','FOTOGRAFIA','STARBUCKS']},
+    {name:'Salidas',    icon:'🎉', cats:['RESTAURANTE','SALIDA','TAXI']},
+    {name:'Regalos y eventos', icon:'🎁', cats:['REGALO','CUMPLE']},
+  ];
 
-  const cats = Object.keys(ppto).sort();
-  document.getElementById('limites-count').textContent = cats.length + ' categorías';
+  const catKeys = Object.keys(ppto);
+  const usadas = new Set();
+  let totalGlobal = 0;
+  Object.values(ppto).forEach(v=>{ totalGlobal+=v||0; });
 
-  document.getElementById('limites-grid').innerHTML = cats.map(cat => {
-    const isExtra = EXTRAORDINARIOS.includes(cat);
-    const label = ETIQUETAS[cat] || cat;
-    return `<div class="limite-card">
-      <div class="limite-label">
-        ${label}
-        ${isExtra ? '<span class="badge badge-var">Extraordinario</span>' : ''}
+  let html = '';
+  GRUPOS.forEach(g => {
+    const cats = g.cats.filter(c => catKeys.includes(c));
+    if(!cats.length) return;
+    const gTotal = cats.reduce((s,c)=>s+(ppto[c]||0),0);
+    cats.forEach(c=>usadas.add(c));
+
+    html += `<div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#334155;border-radius:8px 8px 0 0">
+        <span style="font-size:16px">${g.icon}</span>
+        <span style="flex:1;font-size:13px;font-weight:600;color:#fff">${g.name}</span>
+        <span style="font-size:12px;font-weight:600;color:#FCD34D;font-family:var(--mono,monospace)">S/ ${gTotal.toLocaleString('es-PE')}</span>
       </div>
-      <div class="limite-row">
-        <span class="limite-unit">S/</span>
-        <input class="limite-inp" type="number" min="0" step="10"
-          id="lim-${cat.replace(/[ -]/g,'_')}"
-          value="${ppto[cat]}"
-          data-cat="${cat}"
-          onchange="marcarCambio(this)"
-          ${isExtra ? 'placeholder="0 = sin límite"' : ''}>
+      <div style="border:1px solid var(--border2);border-top:none;border-radius:0 0 8px 8px;overflow:hidden">
+        ${cats.map((cat,ci)=>{
+          const isExtra=EXTRA.has(cat);
+          const label=ETIQUETAS[cat]||cat;
+          const val=ppto[cat]||0;
+          const bg=ci%2===0?'#fff':'#F8FAFC';
+          return `<div style="display:flex;align-items:center;padding:9px 14px;background:${bg};border-top:${ci>0?'1px solid var(--border)':'none'}">
+            <div style="flex:1;font-size:13px;color:var(--slate)">${label}${isExtra?'<span style="font-size:10px;margin-left:6px;padding:1px 6px;border-radius:10px;background:var(--green-bg);color:var(--green-dark)">extraordinario</span>':''}</div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px;color:var(--slate2)">S/</span>
+              <input class="limite-inp" type="number" min="0" step="10"
+                id="lim-${cat.replace(/[ \-]/g,'_')}"
+                value="${val}"
+                data-cat="${cat}"
+                onchange="marcarCambio(this)"
+                style="width:90px;text-align:right;padding:5px 8px;border:1.5px solid var(--border2);border-radius:6px;font-size:13px;font-family:var(--mono,monospace);font-weight:600;color:var(--navy)"
+                ${isExtra?'placeholder="0"':''}>
+            </div>
+          </div>`;
+        }).join('')}
       </div>
-      ${isExtra ? '<div class="limite-sub">0 = categoría extraordinaria sin tope</div>' : ''}
     </div>`;
-  }).join('');
+  });
+
+  // Categorías sin grupo (por si hay nuevas)
+  const sinGrupo = catKeys.filter(c=>!usadas.has(c));
+  if(sinGrupo.length){
+    html += `<div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#64748B;border-radius:8px 8px 0 0">
+        <span style="font-size:16px">📋</span>
+        <span style="flex:1;font-size:13px;font-weight:600;color:#fff">Otras categorías</span>
+      </div>
+      <div style="border:1px solid var(--border2);border-top:none;border-radius:0 0 8px 8px;overflow:hidden">
+        ${sinGrupo.map((cat,ci)=>{
+          const val=ppto[cat]||0;
+          return `<div style="display:flex;align-items:center;padding:9px 14px;background:${ci%2===0?'#fff':'#F8FAFC'};border-top:${ci>0?'1px solid var(--border)':'none'}">
+            <div style="flex:1;font-size:13px;color:var(--slate)">${cat}</div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px;color:var(--slate2)">S/</span>
+              <input class="limite-inp" type="number" min="0" step="10"
+                id="lim-${cat.replace(/[ \-]/g,'_')}" value="${val}" data-cat="${cat}"
+                onchange="marcarCambio(this)"
+                style="width:90px;text-align:right;padding:5px 8px;border:1.5px solid var(--border2);border-radius:6px;font-size:13px;font-family:var(--mono,monospace);font-weight:600;color:var(--navy)">
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('limites-count').textContent = catKeys.length + ' categorías · Total S/ ' + totalGlobal.toLocaleString('es-PE');
+  document.getElementById('limites-grid').innerHTML = html;
 }
 
 function marcarCambio(inp) {
@@ -736,33 +795,20 @@ syncLimitesFromSheets();
 <!-- ═══ LÍMITES ══════════════════════════════════════════════════ -->
 <div class="page" id="page-limites">
   <div class="page-header">
-    <div class="page-title">Límites de Presupuesto</div>
-    <div class="page-subtitle">Edita los montos máximos por categoría. Los cambios se guardan en Google Sheets y se reflejan al instante en el tab Presupuesto.</div>
+    <div class="page-title">🎯 Límites de Presupuesto</div>
+    <div class="page-subtitle">Montos máximos por categoría, agrupados igual que en Mariana · Las categorías marcadas como "extraordinario" no tienen tope fijo</div>
   </div>
-  <div class="tbl-wrap" style="padding:20px;margin-bottom:16px">
-    <div class="tbl-header">
-      <span class="tbl-title">Categorías Variables</span>
-      <span class="tbl-count" id="limites-count">—</span>
-    </div>
-    <div style="padding:16px">
-      <div class="limites-grid" id="limites-grid"></div>
-      <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap">
-        <button class="btn-save" id="btn-guardar" onclick="guardarLimites()">💾 Guardar cambios</button>
-        <button class="btn-reset" onclick="resetLimites()">↺ Descartar</button>
-        <div class="save-status" id="save-status"></div>
-      </div>
-    </div>
+
+  <!-- Barra de acciones fija arriba -->
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:#fff;border:1px solid var(--border2);border-radius:10px;margin-bottom:20px;flex-wrap:wrap">
+    <div style="flex:1;font-size:13px;color:var(--slate2)" id="limites-count">—</div>
+    <button class="btn-save" id="btn-guardar" onclick="guardarLimites()" style="padding:8px 18px;font-size:13px">💾 Guardar cambios</button>
+    <button class="btn-reset" onclick="resetLimites()" style="padding:8px 14px;font-size:13px">↺ Descartar</button>
+    <div class="save-status" id="save-status"></div>
   </div>
-  <div class="tbl-wrap" style="padding:16px">
-    <div class="tbl-header">
-      <span class="tbl-title">ℹ️ Cómo funciona</span>
-    </div>
-    <div style="padding:16px;font-size:13px;color:var(--slate);line-height:1.7">
-      <p>• Los límites se guardan en <strong>Google Sheets</strong> (hoja PRESUPUESTO) y se sincronizan automáticamente al abrir el dashboard.</p>
-      <p>• Las categorías con límite <strong>0</strong> son <em>extraordinarias</em> — se muestran con ⚪ en el semáforo sin compararse contra un tope.</p>
-      <p>• Para que los cambios aparezcan en la próxima regeneración del script Python, guárdalos aquí primero.</p>
-    </div>
-  </div>
+
+  <!-- Grid de grupos -->
+  <div id="limites-grid"></div>
 </div>
 
 </body>
