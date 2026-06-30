@@ -291,6 +291,10 @@ td.zero{color:var(--text3)}
         </div>
       </div>
       <button class="btn btn-primary" id="btn-guardar" onclick="guardarGasto()">💾 Guardar gasto</button>
+      <div id="guardar-error" style="display:none;margin-top:10px;padding:10px 12px;background:var(--red-bg,#FEE2E2);border-radius:8px;font-size:13px;color:var(--red,#DC2626);line-height:1.5"></div>
+      <div style="height:4px"></div>
+      <button class="btn" id="btn-test" onclick="testConexion()" style="width:100%;font-size:12px;color:var(--text2);background:transparent;border:1px dashed var(--border2)">🔌 Probar conexión con servidor</button>
+      <div id="test-result" style="display:none;margin-top:8px;font-size:12px;padding:8px 10px;background:var(--bg3);border-radius:6px;line-height:1.5"></div>
       <div style="height:8px"></div>
     </div>
 
@@ -436,24 +440,44 @@ async function apiGet(action, params=''){
 }
 async function apiPost(body){
   const payload=JSON.stringify({...body, key:API_KEY});
+  // Intento 1: POST con JSON header (estándar)
   try{
     const r=await fetch(API_URL,{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},body:payload});
     const data=await r.json();
     if(data&&data.ok!==undefined)return data;
-    throw new Error('respuesta inesperada');
-  }catch(e){
+    throw new Error('Respuesta inesperada del servidor');
+  }catch(e1){
+    // Intento 2: POST sin Content-Type (Apps Script a veces lo requiere)
     try{
       const r=await fetch(API_URL,{method:'POST',mode:'cors',body:payload});
       const data=await r.json();
       if(data&&data.ok!==undefined)return data;
-      throw new Error('respuesta inesperada');
+      throw new Error('Respuesta inesperada del servidor');
     }catch(e2){
-      try{
-        await fetch(API_URL,{method:'POST',mode:'no-cors',body:payload});
-        return {ok:true,id:body.id||'saved'};
-      }catch(e3){return {error:e3.message};}
+      // Sin más reintentos ciegos — devuelve error real
+      const msg=e2.message||'Sin conexión';
+      return {error:`No se pudo conectar con Google Sheets. ${msg}`};
     }
   }
+}
+
+async function testConexion(){
+  const btn=document.getElementById('btn-test');
+  const res=document.getElementById('test-result');
+  btn.disabled=true; btn.textContent='Probando…';
+  res.style.display='block'; res.style.color='var(--text2)'; res.textContent='Conectando con el servidor…';
+  try{
+    const r=await fetch(API_URL+'?action=ping&key='+API_KEY,{mode:'cors',cache:'no-cache'});
+    const data=await r.json();
+    if(data.ok||data.status==='ok'||data.pong){
+      res.style.color='var(--green)'; res.textContent='✅ Conexión OK — el servidor responde correctamente.';
+    } else {
+      res.style.color='var(--amber)'; res.textContent='⚠️ Servidor responde pero con estado inesperado: '+JSON.stringify(data);
+    }
+  }catch(e){
+    res.style.color='var(--red)'; res.textContent='❌ Error de conexión: '+e.message+'. Verifica que el script de Google Apps Script esté publicado como app web.';
+  }
+  btn.disabled=false; btn.textContent='Probar conexión';
 }
 
 async function syncFromSheets(){
@@ -566,7 +590,9 @@ async function guardarGasto(){
     tercero_monto:onState.tercero?parseFloat((montoSoles*(pctState.tercero||0)/100).toFixed(2)):0,
   };
   const res=await apiPost(body);
+  const errEl=document.getElementById('guardar-error');
   if(res.ok){
+    errEl.style.display='none';
     // Reset form
     document.getElementById('inp-monto').value='';
     document.getElementById('inp-desc').value='';
@@ -581,7 +607,8 @@ async function guardarGasto(){
     btn.innerHTML='✅ ¡Guardado!'; btn.style.background='var(--green)';
     setTimeout(()=>{btn.innerHTML='💾 Guardar gasto';btn.style.background='';btn.disabled=false;},2000);
   }else{
-    alert('Error al guardar: '+(res.error||'Sin conexión'));
+    errEl.style.display='block';
+    errEl.textContent='❌ '+(res.error||'No se pudo guardar. Usa el botón "Probar conexión" para diagnosticar.');
     btn.innerHTML='💾 Guardar gasto'; btn.disabled=false;
   }
 }
