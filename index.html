@@ -467,12 +467,13 @@ async function testConexion(){
   btn.disabled=true; btn.textContent='Probando…';
   res.style.display='block'; res.style.color='var(--text2)'; res.textContent='Conectando con el servidor…';
   try{
-    const r=await fetch(API_URL+'?action=ping&key='+API_KEY,{mode:'cors',cache:'no-cache'});
+    const r=await fetch(API_URL+'?action=get_all&key='+API_KEY,{mode:'cors',cache:'no-cache'});
     const data=await r.json();
-    if(data.ok||data.status==='ok'||data.pong){
-      res.style.color='var(--green)'; res.textContent='✅ Conexión OK — el servidor responde correctamente.';
+    if(data.ok){
+      const nVars=(data.variables||[]).length;
+      res.style.color='var(--green)'; res.textContent='✅ Conexión OK — servidor activo. '+nVars+' registros pendientes en Sheets.';
     } else {
-      res.style.color='var(--amber)'; res.textContent='⚠️ Servidor responde pero con estado inesperado: '+JSON.stringify(data);
+      res.style.color='var(--amber)'; res.textContent='⚠️ Servidor responde pero con error: '+(data.error||JSON.stringify(data));
     }
   }catch(e){
     res.style.color='var(--red)'; res.textContent='❌ Error de conexión: '+e.message+'. Verifica que el script de Google Apps Script esté publicado como app web.';
