@@ -439,25 +439,20 @@ async function apiGet(action, params=''){
   }catch(e){return {error:e.message};}
 }
 async function apiPost(body){
+  // GAS no devuelve cabeceras CORS en POST, así que usamos no-cors + text/plain.
+  // text/plain evita el preflight; no-cors permite enviar aunque no podamos leer la respuesta.
+  // El dato SÍ llega a GAS y se guarda — solo no podemos leer la confirmación.
   const payload=JSON.stringify({...body, key:API_KEY});
-  // Intento 1: POST con JSON header (estándar)
   try{
-    const r=await fetch(API_URL,{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},body:payload});
-    const data=await r.json();
-    if(data&&data.ok!==undefined)return data;
-    throw new Error('Respuesta inesperada del servidor');
-  }catch(e1){
-    // Intento 2: POST sin Content-Type (Apps Script a veces lo requiere)
-    try{
-      const r=await fetch(API_URL,{method:'POST',mode:'cors',body:payload});
-      const data=await r.json();
-      if(data&&data.ok!==undefined)return data;
-      throw new Error('Respuesta inesperada del servidor');
-    }catch(e2){
-      // Sin más reintentos ciegos — devuelve error real
-      const msg=e2.message||'Sin conexión';
-      return {error:`No se pudo conectar con Google Sheets. ${msg}`};
-    }
+    await fetch(API_URL,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:payload
+    });
+    return {ok:true};
+  }catch(e){
+    return {error:e.message||'Sin conexión'};
   }
 }
 
@@ -563,7 +558,14 @@ function updatePctBadge(){
 
 async function guardarGasto(){
   const montoIng=S(document.getElementById('inp-monto').value);
-  if(!montoIng||montoIng<=0){document.getElementById('inp-monto').focus();return;}
+  const errEl=document.getElementById('guardar-error');
+  if(!montoIng||montoIng<=0){
+    errEl.style.display='block';errEl.textContent='⚠️ Ingresa un monto mayor a 0.';
+    document.getElementById('inp-monto').focus();
+    setTimeout(()=>errEl.style.display='none',3000);
+    return;
+  }
+  errEl.style.display='none';
   const tc=getTCNow();
   if(esDolar&&!tc){alert('Registra el TC del mes en 💱 T/C primero.');return;}
   const totPct=PERSONAS.reduce((s,p)=>s+(onState[p.id]?(pctState[p.id]||0):0),0);
@@ -591,7 +593,6 @@ async function guardarGasto(){
     tercero_monto:onState.tercero?parseFloat((montoSoles*(pctState.tercero||0)/100).toFixed(2)):0,
   };
   const res=await apiPost(body);
-  const errEl=document.getElementById('guardar-error');
   if(res.ok){
     errEl.style.display='none';
     // Reset form
@@ -1049,8 +1050,11 @@ function goScreen(s,btn){
 
 // ── Init ─────────────────────────────────────
 function fillCats(){
-  const sel=document.getElementById('inp-cat');
-  HISTORICO.categorias.sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+  try{
+    const sel=document.getElementById('inp-cat');
+    const cats=(HISTORICO&&HISTORICO.categorias)||[];
+    cats.sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+  }catch(e){}
 }
 function buildPptoMeses(){ /* presupuesto tab removed */ }
 
