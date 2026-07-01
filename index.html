@@ -574,45 +574,55 @@ async function guardarGasto(){
   const montoSoles=esDolar?parseFloat((montoIng*(tc||1)).toFixed(2)):montoIng;
   const btn=document.getElementById('btn-guardar');
   btn.innerHTML='<span class="spinner"></span> Guardando…'; btn.disabled=true;
-  const body={
-    action:'save_var',
-    id:'V'+Date.now(),
-    fecha_tx:document.getElementById('inp-fecha').value||todayISO(),
-    cierre_ym:document.getElementById('inp-cierre').value||nowYM(),
-    descripcion:document.getElementById('inp-desc').value||'Sin descripción',
-    categoria:document.getElementById('inp-cat').value||'SIN CATEGORÍA',
-    medio:document.getElementById('inp-medio').value||'',
-    moneda:esDolar?'DÓLARES':'SOLES',
-    monto_orig:montoIng, tc_aplicado:esDolar?tc:'', monto_soles:montoSoles,
-    mariana_pct:onState.mariana?(pctState.mariana||0):0,
-    gary_pct:onState.gary?(pctState.gary||0):0,
-    miguel_pct:onState.miguel?(pctState.miguel||0):0,
-    tercero_pct:onState.tercero?(pctState.tercero||0):0,
-    mariana_monto:onState.mariana?parseFloat((montoSoles*(pctState.mariana||0)/100).toFixed(2)):0,
-    gary_monto:onState.gary?parseFloat((montoSoles*(pctState.gary||0)/100).toFixed(2)):0,
-    miguel_monto:onState.miguel?parseFloat((montoSoles*(pctState.miguel||0)/100).toFixed(2)):0,
-    tercero_monto:onState.tercero?parseFloat((montoSoles*(pctState.tercero||0)/100).toFixed(2)):0,
-  };
-  const res=await apiPost(body);
-  if(res.ok){
-    errEl.style.display='none';
-    // Reset form
-    document.getElementById('inp-monto').value='';
-    document.getElementById('inp-desc').value='';
-    document.getElementById('inp-medio').value='';
-    esDolar=false; document.getElementById('monto-lbl').textContent='Monto S/';
-    document.getElementById('conv-box').style.display='none';
-    document.getElementById('inp-fecha').value=todayISO();
-    document.getElementById('inp-cierre').value=nowYM();
-    onFechaChange(); buildPersonas();
-    // Add to local gsData
-    gsData.variables.push(body);
-    btn.innerHTML='✅ ¡Guardado!'; btn.style.background='var(--green)';
-    setTimeout(()=>{btn.innerHTML='💾 Guardar gasto';btn.style.background='';btn.disabled=false;},2000);
-  }else{
-    errEl.style.display='block';
-    errEl.textContent='❌ '+(res.error||'No se pudo guardar. Usa el botón "Probar conexión" para diagnosticar.');
+  try{
+    const body={
+      action:'save_var',
+      id:'V'+Date.now(),
+      fecha_tx:document.getElementById('inp-fecha').value||todayISO(),
+      cierre_ym:document.getElementById('inp-cierre').value||nowYM(),
+      descripcion:document.getElementById('inp-desc').value||'Sin descripción',
+      categoria:document.getElementById('inp-cat').value||'SIN CATEGORÍA',
+      medio:document.getElementById('inp-medio').value||'',
+      moneda:esDolar?'DÓLARES':'SOLES',
+      monto_orig:montoIng, tc_aplicado:esDolar?tc:'', monto_soles:montoSoles,
+      mariana_pct:onState.mariana?(pctState.mariana||0):0,
+      gary_pct:onState.gary?(pctState.gary||0):0,
+      miguel_pct:onState.miguel?(pctState.miguel||0):0,
+      tercero_pct:onState.tercero?(pctState.tercero||0):0,
+      mariana_monto:onState.mariana?parseFloat((montoSoles*(pctState.mariana||0)/100).toFixed(2)):0,
+      gary_monto:onState.gary?parseFloat((montoSoles*(pctState.gary||0)/100).toFixed(2)):0,
+      miguel_monto:onState.miguel?parseFloat((montoSoles*(pctState.miguel||0)/100).toFixed(2)):0,
+      tercero_monto:onState.tercero?parseFloat((montoSoles*(pctState.tercero||0)/100).toFixed(2)):0,
+    };
+    const res=await apiPost(body);
+    if(res && res.ok){
+      errEl.style.display='none';
+      // Reset form
+      document.getElementById('inp-monto').value='';
+      document.getElementById('inp-desc').value='';
+      document.getElementById('inp-medio').value='';
+      esDolar=false; document.getElementById('monto-lbl').textContent='Monto S/';
+      document.getElementById('conv-box').style.display='none';
+      document.getElementById('inp-fecha').value=todayISO();
+      document.getElementById('inp-cierre').value=nowYM();
+      onFechaChange(); buildPersonas();
+      // Add to local gsData
+      gsData.variables.push(body);
+      btn.innerHTML='✅ ¡Guardado!'; btn.style.background='var(--green)';
+      setTimeout(()=>{btn.innerHTML='💾 Guardar gasto';btn.style.background='';btn.disabled=false;},2000);
+    }else{
+      errEl.style.display='block';
+      errEl.textContent='❌ '+((res&&res.error)||'No se pudo guardar. Usa el botón "Probar conexión" para diagnosticar.');
+      btn.innerHTML='💾 Guardar gasto'; btn.disabled=false;
+    }
+  }catch(e){
+    // Red de seguridad: si algo inesperado revienta a mitad de camino, que se vea
+    // en vez de quedar en silencio total (antes esto podía dejar el botón "colgado"
+    // sin ningún mensaje visible).
     btn.innerHTML='💾 Guardar gasto'; btn.disabled=false;
+    errEl.style.display='block';
+    errEl.textContent='❌ Error inesperado: '+(e&&e.message?e.message:e);
+    alert('❌ Error al guardar: '+(e&&e.message?e.message:e));
   }
 }
 
