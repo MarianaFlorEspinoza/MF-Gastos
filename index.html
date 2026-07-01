@@ -557,24 +557,50 @@ function updatePctBadge(){
   b.className='pct-pill '+(Math.abs(tot-100)<0.6?'ok':'warn');
 }
 
-async function guardarGasto(){
-  const montoIng=S(document.getElementById('inp-monto').value);
-  const errEl=document.getElementById('guardar-error');
-  if(!montoIng||montoIng<=0){
-    errEl.style.display='block';errEl.textContent='⚠️ Ingresa un monto mayor a 0.';
-    document.getElementById('inp-monto').focus();
-    setTimeout(()=>errEl.style.display='none',3000);
-    return;
-  }
-  errEl.style.display='none';
-  const tc=getTCNow();
-  if(esDolar&&!tc){alert('Registra el TC del mes en 💱 T/C primero.');return;}
-  const totPct=PERSONAS.reduce((s,p)=>s+(onState[p.id]?(pctState[p.id]||0):0),0);
-  if(Math.abs(totPct-100)>0.6){alert('Los % deben sumar 100%.');return;}
-  const montoSoles=esDolar?parseFloat((montoIng*(tc||1)).toFixed(2)):montoIng;
-  const btn=document.getElementById('btn-guardar');
-  btn.innerHTML='<span class="spinner"></span> Guardando…'; btn.disabled=true;
+// Red de seguridad absoluta: crea un banner rojo directo en <body>, sin depender
+// de ningún elemento que pudiera faltar o estar mal enlazado. Así, sin importar
+// qué falle, SIEMPRE se ve algo en pantalla en vez de quedar en silencio total.
+function mostrarErrorFatal(msg){
   try{
+    const old=document.getElementById('fatal-error-banner');
+    if(old) old.remove();
+    const b=document.createElement('div');
+    b.id='fatal-error-banner';
+    b.textContent='⚠️ '+msg;
+    b.style.cssText='position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;padding:14px 16px;z-index:999999;font-size:13px;font-family:sans-serif;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.3)';
+    b.onclick=()=>b.remove();
+    document.body.appendChild(b);
+  }catch(e2){ /* si esto también falla, ya no hay nada más que hacer */ }
+}
+
+// Red de seguridad global: cualquier error de JS o promesa no manejada en toda la
+// página se muestra en el banner rojo, en vez de fallar en silencio total.
+window.addEventListener('error', function(ev){
+  mostrarErrorFatal('Error de JS: '+(ev&&ev.message?ev.message:ev)+(ev&&ev.lineno?(' (línea '+ev.lineno+')'):''));
+});
+window.addEventListener('unhandledrejection', function(ev){
+  const r=ev&&ev.reason;
+  mostrarErrorFatal('Promesa sin manejar: '+(r&&r.message?r.message:r));
+});
+
+async function guardarGasto(){
+  try{
+    const montoIng=S(document.getElementById('inp-monto').value);
+    const errEl=document.getElementById('guardar-error');
+    if(!montoIng||montoIng<=0){
+      if(errEl){errEl.style.display='block';errEl.textContent='⚠️ Ingresa un monto mayor a 0.';setTimeout(()=>errEl.style.display='none',3000);}
+      else mostrarErrorFatal('Ingresa un monto mayor a 0.');
+      document.getElementById('inp-monto').focus();
+      return;
+    }
+    if(errEl) errEl.style.display='none';
+    const tc=getTCNow();
+    if(esDolar&&!tc){mostrarErrorFatal('Registra el TC del mes en 💱 T/C primero.');return;}
+    const totPct=PERSONAS.reduce((s,p)=>s+(onState[p.id]?(pctState[p.id]||0):0),0);
+    if(Math.abs(totPct-100)>0.6){mostrarErrorFatal('Los % deben sumar 100% (ahora suman '+totPct.toFixed(1)+'%).');return;}
+    const montoSoles=esDolar?parseFloat((montoIng*(tc||1)).toFixed(2)):montoIng;
+    const btn=document.getElementById('btn-guardar');
+    if(btn){btn.innerHTML='<span class="spinner"></span> Guardando…'; btn.disabled=true;}
     const body={
       action:'save_var',
       id:'V'+Date.now(),
@@ -596,7 +622,7 @@ async function guardarGasto(){
     };
     const res=await apiPost(body);
     if(res && res.ok){
-      errEl.style.display='none';
+      if(errEl) errEl.style.display='none';
       // Reset form
       document.getElementById('inp-monto').value='';
       document.getElementById('inp-desc').value='';
@@ -608,21 +634,23 @@ async function guardarGasto(){
       onFechaChange(); buildPersonas();
       // Add to local gsData
       gsData.variables.push(body);
-      btn.innerHTML='✅ ¡Guardado!'; btn.style.background='var(--green)';
-      setTimeout(()=>{btn.innerHTML='💾 Guardar gasto';btn.style.background='';btn.disabled=false;},2000);
+      if(btn){btn.innerHTML='✅ ¡Guardado!'; btn.style.background='var(--green)';
+        setTimeout(()=>{btn.innerHTML='💾 Guardar gasto';btn.style.background='';btn.disabled=false;},2000);}
     }else{
-      errEl.style.display='block';
-      errEl.textContent='❌ '+((res&&res.error)||'No se pudo guardar. Usa el botón "Probar conexión" para diagnosticar.');
-      btn.innerHTML='💾 Guardar gasto'; btn.disabled=false;
+      const msg=(res&&res.error)||'No se pudo guardar. Usa el botón "Probar conexión" para diagnosticar.';
+      if(errEl){errEl.style.display='block';errEl.textContent='❌ '+msg;} else mostrarErrorFatal(msg);
+      if(btn){btn.innerHTML='💾 Guardar gasto'; btn.disabled=false;}
     }
   }catch(e){
-    // Red de seguridad: si algo inesperado revienta a mitad de camino, que se vea
-    // en vez de quedar en silencio total (antes esto podía dejar el botón "colgado"
-    // sin ningún mensaje visible).
-    btn.innerHTML='💾 Guardar gasto'; btn.disabled=false;
-    errEl.style.display='block';
-    errEl.textContent='❌ Error inesperado: '+(e&&e.message?e.message:e);
-    alert('❌ Error al guardar: '+(e&&e.message?e.message:e));
+    // Red de seguridad: si algo inesperado revienta a mitad de camino (por ejemplo
+    // un elemento del formulario que no se encontró), que SIEMPRE se vea algo en
+    // pantalla en vez de quedar en silencio total sin ningún mensaje.
+    const msg=(e&&e.message)?e.message:String(e);
+    const btn2=document.getElementById('btn-guardar');
+    if(btn2){btn2.innerHTML='💾 Guardar gasto'; btn2.disabled=false;}
+    const errEl2=document.getElementById('guardar-error');
+    if(errEl2){errEl2.style.display='block';errEl2.textContent='❌ Error inesperado: '+msg;}
+    mostrarErrorFatal('Error inesperado al guardar: '+msg);
   }
 }
 
