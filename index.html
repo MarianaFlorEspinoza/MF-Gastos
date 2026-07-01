@@ -419,12 +419,26 @@ function mLL(ym){if(!ym)return'';const[y,m]=ym.split('-');return ML[parseInt(m)-
 function dL(iso){if(!iso)return'';const[y,m,d]=iso.split('-');return parseInt(d)+' '+MC[parseInt(m)-1]+' '+y;}
 function fmt(v){const n=S(v);if(n===0)return'—';return'S/ '+Math.abs(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtN(v){const n=S(v);if(n===0)return'<span class="zero">—</span>';if(n<0)return'<span class="neg">'+fmt(v)+'</span>';return'S/ '+n.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});}
+// Lee un objeto guardado en localStorage de forma segura. Si el valor guardado
+// quedó corrupto (por una versión anterior de la app, una escritura interrumpida,
+// etc.), en vez de romper toda la pantalla con un SyntaxError, lo resetea y sigue.
+function lsGetObj(key){
+  try{
+    return JSON.parse(localStorage.getItem(key)||'{}');
+  }catch(e){
+    localStorage.setItem(key,'{}');
+    return {};
+  }
+}
 function getTCMes(ym){
-  // Check Google Sheets first, then local storage
+  // Prioriza lo guardado en este dispositivo (mfg-tc): es la intención más reciente
+  // del usuario. Si el guardado a Sheets falla o tarda, esto evita que se siga
+  // mostrando un valor viejo de Sheets como si fuera el vigente.
+  const loc=lsGetObj('mfg-tc');
+  if(loc[ym]!=null) return S(loc[ym]);
   const gs=gsData.tipo_cambio.find(t=>t.mes_ym===ym);
   if(gs) return S(gs.tc);
-  const loc=JSON.parse(localStorage.getItem('mfg-tc')||'{}');
-  return loc[ym]||null;
+  return null;
 }
 function getTCNow(){return getTCMes(nowYM());}
 
@@ -694,9 +708,14 @@ function renderTCBar(id){
        <button class="btn-sm" style="background:var(--amber-bg);border-color:#FCD34D;margin-left:auto" onclick="goScreen('tc',document.querySelector('.bnav-item:nth-child(3)'))">Ingresar</button></div>`;
 }
 function renderTC(){
-  const allTC=[...gsData.tipo_cambio];
-  const local=JSON.parse(localStorage.getItem('mfg-tc')||'{}');
-  Object.entries(local).forEach(([ym,tc])=>{if(!allTC.find(t=>t.mes_ym===ym))allTC.push({mes_ym:ym,tc});});
+  // Igual que en getTCMes: lo guardado en este dispositivo (mfg-tc) manda sobre lo
+  // que haya en Sheets para ese mes, porque es la edición más reciente del usuario.
+  const allTC=gsData.tipo_cambio.filter(t=>{
+    const local=lsGetObj('mfg-tc');
+    return local[t.mes_ym]==null;
+  }).map(t=>({...t}));
+  const local=lsGetObj('mfg-tc');
+  Object.entries(local).forEach(([ym,tc])=>{allTC.push({mes_ym:ym,tc});});
   const tc=getTCNow();
   const eq=document.getElementById('tc-equiv-card');
   if(tc){
@@ -737,7 +756,7 @@ async function guardarTC(){
     }
     if(btn){btn.disabled=true;btn.textContent='Guardando…';}
     // Save locally primero, como respaldo si falla la red
-    const local=JSON.parse(localStorage.getItem('mfg-tc')||'{}');
+    const local=lsGetObj('mfg-tc');
     local[mes]=val; localStorage.setItem('mfg-tc',JSON.stringify(local));
     // Save to Sheets
     const res=await apiPost({action:'save_tc',mes_ym:mes,tc:val});
@@ -745,6 +764,10 @@ async function guardarTC(){
       // Update gsData
       const idx=gsData.tipo_cambio.findIndex(t=>t.mes_ym===mes);
       if(idx>=0)gsData.tipo_cambio[idx].tc=val; else gsData.tipo_cambio.push({mes_ym:mes,tc:val});
+      // Ya confirmado en Sheets: borramos el respaldo local para que este mes
+      // vuelva a reflejar Sheets como fuente de verdad (por si se edita ahí después).
+      const local2=lsGetObj('mfg-tc');
+      delete local2[mes]; localStorage.setItem('mfg-tc',JSON.stringify(local2));
       tcSetStatus('✅ TC guardado correctamente en Google Sheets.','var(--green-bg,#D1FAE5)','var(--green-dark,#065F46)');
       setTimeout(()=>tcSetStatus(''),3500);
       if(btn){btn.textContent='✅ ¡Guardado!';}
@@ -788,7 +811,7 @@ function renderFijos(){
   const pagadosMap={};
   gsData.fijos.filter(f=>f.mes_ym===mesFijosActual).forEach(f=>{pagadosMap[f.id]={pagado:f.pagado,fecha:f.fecha_pago};});
   // Also check localStorage
-  const localFijos=JSON.parse(localStorage.getItem('mfg-fijos-'+mesFijosActual)||'{}');
+  const localFijos=lsGetObj('mfg-fijos-'+mesFijosActual);
   Object.assign(pagadosMap,localFijos);
 
   // Build items with monto en soles
