@@ -329,7 +329,8 @@ td.zero{color:var(--text3)}
             <input type="number" id="tc-val" placeholder="3.750" step="0.001" min="1" style="font-size:18px;font-weight:700;text-align:center">
           </div>
         </div>
-        <button class="btn btn-primary" onclick="guardarTC()">Guardar TC</button>
+        <button class="btn btn-primary" id="btn-guardar-tc" onclick="guardarTC()">Guardar TC</button>
+        <div id="tc-status" style="display:none;margin-top:10px;padding:10px 12px;border-radius:8px;font-size:13px;line-height:1.5"></div>
       </div>
       <div class="card" id="tc-equiv-card" style="display:none">
         <div class="card-title">Equivalencias rápidas</div>
@@ -482,6 +483,13 @@ async function syncFromSheets(){
   const res=await apiGet('get_all');
   if(res.ok){
     gsData=res;
+    // El backend devuelve tipo_cambio como objeto {mes_ym: tc}, pero el resto del
+    // código (getTCMes, renderTC, guardarTC) lo usa como arreglo [{mes_ym,tc},...].
+    // Sin esto, gsData.tipo_cambio.find()/.push() rompía silenciosamente cualquier
+    // función que empezara pidiendo el TC del mes (incluido guardar un gasto nuevo).
+    if(gsData.tipo_cambio && !Array.isArray(gsData.tipo_cambio)){
+      gsData.tipo_cambio = Object.entries(gsData.tipo_cambio).map(([mes_ym,tc])=>({mes_ym,tc:S(tc)}));
+    }
     setSyncDot('✓ Sincronizado','#34D399');
     setTimeout(()=>setSyncDot('',''),2000);
     // Refresh current screen
@@ -584,7 +592,6 @@ window.addEventListener('unhandledrejection', function(ev){
 });
 
 async function guardarGasto(){
-  mostrarErrorFatal('DEBUG: guardarGasto() se ejecutó. monto-input='+JSON.stringify(document.getElementById('inp-monto')&&document.getElementById('inp-monto').value));
   try{
     const montoIng=S(document.getElementById('inp-monto').value);
     const errEl=document.getElementById('guardar-error');
@@ -623,7 +630,13 @@ async function guardarGasto(){
     };
     const res=await apiPost(body);
     if(res && res.ok){
-      if(errEl) errEl.style.display='none';
+      if(errEl){
+        errEl.style.display='block';
+        errEl.style.background='var(--green-bg,#D1FAE5)';
+        errEl.style.color='var(--green-dark,#065F46)';
+        errEl.textContent='✅ Gasto guardado correctamente en Google Sheets.';
+        setTimeout(()=>{errEl.style.display='none';errEl.style.background='';errEl.style.color='';},3500);
+      }
       // Reset form
       document.getElementById('inp-monto').value='';
       document.getElementById('inp-desc').value='';
@@ -639,7 +652,12 @@ async function guardarGasto(){
         setTimeout(()=>{btn.innerHTML='💾 Guardar gasto';btn.style.background='';btn.disabled=false;},2000);}
     }else{
       const msg=(res&&res.error)||'No se pudo guardar. Usa el botón "Probar conexión" para diagnosticar.';
-      if(errEl){errEl.style.display='block';errEl.textContent='❌ '+msg;} else mostrarErrorFatal(msg);
+      if(errEl){
+        errEl.style.display='block';
+        errEl.style.background='var(--red-bg,#FEE2E2)';
+        errEl.style.color='var(--red,#DC2626)';
+        errEl.textContent='❌ '+msg;
+      } else mostrarErrorFatal(msg);
       if(btn){btn.innerHTML='💾 Guardar gasto'; btn.disabled=false;}
     }
   }catch(e){
@@ -650,7 +668,12 @@ async function guardarGasto(){
     const btn2=document.getElementById('btn-guardar');
     if(btn2){btn2.innerHTML='💾 Guardar gasto'; btn2.disabled=false;}
     const errEl2=document.getElementById('guardar-error');
-    if(errEl2){errEl2.style.display='block';errEl2.textContent='❌ Error inesperado: '+msg;}
+    if(errEl2){
+      errEl2.style.display='block';
+      errEl2.style.background='var(--red-bg,#FEE2E2)';
+      errEl2.style.color='var(--red,#DC2626)';
+      errEl2.textContent='❌ Error inesperado: '+msg;
+    }
     mostrarErrorFatal('Error inesperado al guardar: '+msg);
   }
 }
@@ -692,21 +715,48 @@ function renderTC(){
     </div>`).join('');
 }
 function editTC(ym,tc){document.getElementById('tc-mes').value=ym;document.getElementById('tc-val').value=tc;}
+function tcSetStatus(msg,bg,fg){
+  const el=document.getElementById('tc-status');
+  if(!el){ if(msg) mostrarErrorFatal(msg); return; }
+  if(!msg){ el.style.display='none'; return; }
+  el.style.display='block'; el.style.background=bg; el.style.color=fg; el.textContent=msg;
+}
+
 async function guardarTC(){
-  const mes=document.getElementById('tc-mes').value;
-  const val=S(document.getElementById('tc-val').value);
-  if(!mes||!val||val<1){alert('Ingresa mes y TC válido.');return;}
-  // Save locally first
-  const local=JSON.parse(localStorage.getItem('mfg-tc')||'{}');
-  local[mes]=val; localStorage.setItem('mfg-tc',JSON.stringify(local));
-  // Save to Sheets
-  const res=await apiPost({action:'save_tc',mes_ym:mes,tc:val});
-  if(res.ok){
-    // Update gsData
-    const idx=gsData.tipo_cambio.findIndex(t=>t.mes_ym===mes);
-    if(idx>=0)gsData.tipo_cambio[idx].tc=val; else gsData.tipo_cambio.push({mes_ym:mes,tc:val});
+  const btn=document.getElementById('btn-guardar-tc');
+  try{
+    const mes=document.getElementById('tc-mes').value;
+    const val=S(document.getElementById('tc-val').value);
+    if(!mes||!val||val<1){
+      tcSetStatus('⚠️ Ingresa mes y TC válido.','var(--amber-bg,#FEF3C7)','var(--amber-dk,#92400E)');
+      return;
+    }
+    if(btn){btn.disabled=true;btn.textContent='Guardando…';}
+    // Save locally primero, como respaldo si falla la red
+    const local=JSON.parse(localStorage.getItem('mfg-tc')||'{}');
+    local[mes]=val; localStorage.setItem('mfg-tc',JSON.stringify(local));
+    // Save to Sheets
+    const res=await apiPost({action:'save_tc',mes_ym:mes,tc:val});
+    if(res && res.ok){
+      // Update gsData
+      const idx=gsData.tipo_cambio.findIndex(t=>t.mes_ym===mes);
+      if(idx>=0)gsData.tipo_cambio[idx].tc=val; else gsData.tipo_cambio.push({mes_ym:mes,tc:val});
+      tcSetStatus('✅ TC guardado correctamente en Google Sheets.','var(--green-bg,#D1FAE5)','var(--green-dark,#065F46)');
+      setTimeout(()=>tcSetStatus(''),3500);
+      if(btn){btn.textContent='✅ ¡Guardado!';}
+    }else{
+      const msg=(res&&res.error)||'No se pudo guardar en Sheets (quedó guardado solo en este dispositivo). Usa "Probar conexión" para diagnosticar.';
+      tcSetStatus('❌ '+msg,'var(--red-bg,#FEE2E2)','var(--red,#DC2626)');
+      if(btn){btn.textContent='Guardar TC';}
+    }
+    if(btn){setTimeout(()=>{btn.disabled=false;btn.textContent='Guardar TC';},2000);}
+    renderTC(); renderTCBar('tc-alerta-fijos'); renderTCBar('tc-alerta-var'); onMontoChange();
+  }catch(e){
+    const msg=(e&&e.message)?e.message:String(e);
+    if(btn){btn.disabled=false;btn.textContent='Guardar TC';}
+    tcSetStatus('❌ Error inesperado: '+msg,'var(--red-bg,#FEE2E2)','var(--red,#DC2626)');
+    mostrarErrorFatal('Error inesperado al guardar TC: '+msg);
   }
-  renderTC(); renderTCBar('tc-alerta-fijos'); renderTCBar('tc-alerta-var'); onMontoChange();
 }
 
 // ── Fijos ────────────────────────────────────
