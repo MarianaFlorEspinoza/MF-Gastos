@@ -490,6 +490,10 @@ async function syncFromSheets(){
     if(gsData.tipo_cambio && !Array.isArray(gsData.tipo_cambio)){
       gsData.tipo_cambio = Object.entries(gsData.tipo_cambio).map(([mes_ym,tc])=>({mes_ym,tc:S(tc)}));
     }
+    // El backend devuelve la lista de fijos bajo la clave "fijos_estado", pero el
+    // resto del código (toggleFijo, renderFijos) usa "gsData.fijos". Sin este alias,
+    // gsData.fijos queda undefined y .filter()/.find() rompen la pantalla de Fijos.
+    gsData.fijos = gsData.fijos_estado || gsData.fijos || [];
     setSyncDot('✓ Sincronizado','#34D399');
     setTimeout(()=>setSyncDot('',''),2000);
     // Refresh current screen
