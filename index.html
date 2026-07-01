@@ -584,6 +584,7 @@ window.addEventListener('unhandledrejection', function(ev){
 });
 
 async function guardarGasto(){
+  mostrarErrorFatal('DEBUG: guardarGasto() se ejecutó. monto-input='+JSON.stringify(document.getElementById('inp-monto')&&document.getElementById('inp-monto').value));
   try{
     const montoIng=S(document.getElementById('inp-monto').value);
     const errEl=document.getElementById('guardar-error');
