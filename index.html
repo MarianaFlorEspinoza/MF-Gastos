@@ -439,18 +439,19 @@ async function apiGet(action, params=''){
   }catch(e){return {error:e.message};}
 }
 async function apiPost(body){
-  // GAS no devuelve cabeceras CORS en POST, así que usamos no-cors + text/plain.
-  // text/plain evita el preflight; no-cors permite enviar aunque no podamos leer la respuesta.
-  // El dato SÍ llega a GAS y se guarda — solo no podemos leer la confirmación.
+  // 'text/plain' evita el preflight CORS (OPTIONS) que Apps Script no responde.
+  // El endpoint /exec de Apps Script SÍ envía Access-Control-Allow-Origin en la
+  // respuesta real (tras su redirect a googleusercontent.com), así que podemos
+  // leer la confirmación real en vez de asumir éxito a ciegas con no-cors.
   const payload=JSON.stringify({...body, key:API_KEY});
   try{
-    await fetch(API_URL,{
+    const r=await fetch(API_URL,{
       method:'POST',
-      mode:'no-cors',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
       body:payload
     });
-    return {ok:true};
+    const data=await r.json();
+    return data;
   }catch(e){
     return {error:e.message||'Sin conexión'};
   }
