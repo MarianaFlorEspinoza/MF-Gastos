@@ -157,6 +157,11 @@ input:disabled{opacity:.4;background:var(--bg3)}
 .rep-tab{padding:7px 15px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);white-space:nowrap;flex-shrink:0}
 .rep-tab.active{background:var(--navy2);color:#fff;border-color:var(--navy2)}
 
+/* ── NATURALEZA (Variable / Fijo) ── */
+.nat-tabs{display:flex;gap:7px;margin-bottom:12px}
+.nat-tab{flex:1;padding:9px 15px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);text-align:center}
+.nat-tab.active{background:var(--navy2);color:#fff;border-color:var(--navy2)}
+
 /* ── TABLES ── */
 .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse;font-size:12px}
@@ -234,7 +239,21 @@ td.zero{color:var(--text3)}
   <div class="content">
     <!-- ── NUEVO GASTO ── -->
     <div id="screen-nuevo" class="screen active">
+      <div class="nat-tabs" id="nat-toggle">
+        <button type="button" class="nat-tab active" data-nat="VARIABLE" onclick="setNaturaleza('VARIABLE')">💸 Variable</button>
+        <button type="button" class="nat-tab" data-nat="FIJO" onclick="setNaturaleza('FIJO')">📌 Fijo</button>
+      </div>
       <div id="tc-alerta-var"></div>
+      <div class="card" id="card-fijo-sel" style="display:none">
+        <div class="frow" style="margin-bottom:11px"><label class="lbl">¿Qué gasto fijo?</label>
+          <select id="inp-fijo-cat" onchange="onFijoCatChange()">
+            <option value="">— elegir —</option>
+          </select>
+        </div>
+        <div class="frow" style="margin-bottom:0"><label class="lbl">Mes correspondiente</label>
+          <input type="month" id="inp-fijo-mes">
+        </div>
+      </div>
       <div class="card">
         <div class="monto-wrap">
           <div class="monto-lbl" id="monto-lbl">Monto S/</div>
@@ -246,12 +265,12 @@ td.zero{color:var(--text3)}
           <div class="conv-row"><span class="conv-lbl">TC del mes</span><span class="conv-val" id="cv-tc">—</span></div>
           <div class="conv-row"><span class="conv-lbl">En soles</span><span class="conv-val big" id="cv-sol">S/0.00</span></div>
         </div>
-        <div class="frow" style="margin-top:11px;margin-bottom:0">
+        <div class="frow" id="row-monto-total" style="margin-top:11px;margin-bottom:0">
           <label class="lbl">Monto total (opcional, si este gasto es una cuota de un pago dividido)</label>
           <input type="number" id="inp-monto-total" placeholder="Déjalo vacío si no aplica" inputmode="decimal" step="0.01">
         </div>
       </div>
-      <div class="card">
+      <div class="card" id="card-fecha-desc">
         <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:9px 12px;display:flex;align-items:center;justify-content:space-between;margin-bottom:11px">
           <div>
             <div class="lbl">📅 Fecha</div>
@@ -277,7 +296,7 @@ td.zero{color:var(--text3)}
           </div>
         </div>
       </div>
-      <div class="card">
+      <div class="card" id="card-cierre">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
           <span style="font-size:14px;font-weight:600">Mes de cierre</span>
         </div>
@@ -300,26 +319,6 @@ td.zero{color:var(--text3)}
       <button class="btn" id="btn-test" onclick="testConexion()" style="width:100%;font-size:12px;color:var(--text2);background:transparent;border:1px dashed var(--border2)">🔌 Probar conexión con servidor</button>
       <div id="test-result" style="display:none;margin-top:8px;font-size:12px;padding:8px 10px;background:var(--bg3);border-radius:6px;line-height:1.5"></div>
       <div style="height:8px"></div>
-    </div>
-
-    <!-- ── FIJOS ── -->
-    <div id="screen-fijos" class="screen">
-      <div id="tc-alerta-fijos"></div>
-      <div class="mes-nav">
-        <button onclick="cambiarMesFijos(-1)">‹</button>
-        <span class="mes-title" id="mes-fijos-title"></span>
-        <button onclick="cambiarMesFijos(1)">›</button>
-      </div>
-      <div class="total-row">
-        <span style="font-size:12px;color:var(--text2)">Total fijos</span>
-        <div style="text-align:right">
-          <strong id="tot-fijos" style="font-size:16px;font-weight:700"></strong>
-          <div style="font-size:10px;color:var(--text2)" id="tot-fijos-usd"></div>
-        </div>
-      </div>
-      <div class="prog-bg"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
-      <div class="prog-meta"><span id="prog-txt">0 de 0 pagados</span><span id="prog-pend"></span></div>
-      <div class="card" id="lista-fijos"><div class="loading">⏳ Cargando…</div></div>
     </div>
 
     <!-- ── TC ── -->
@@ -350,6 +349,7 @@ td.zero{color:var(--text3)}
         <button class="rep-tab active" onclick="setRepTab('mariana',this)">👤 Mariana</button>
         <button class="rep-tab" onclick="setRepTab('gary',this)">💳 Gary</button>
         <button class="rep-tab" onclick="setRepTab('pension',this)">👩 Mamá</button>
+        <button class="rep-tab" onclick="setRepTab('fijos',this)">📌 Fijos</button>
       </div>
 
       <!-- Mariana -->
@@ -367,15 +367,32 @@ td.zero{color:var(--text3)}
       <div id="rep-pension" class="rep-content" style="display:none">
         <div id="pm-content"></div>
       </div>
+
+      <!-- Fijos (solo lectura: el registro ahora se hace desde ➕ Nuevo) -->
+      <div id="rep-fijos" class="rep-content" style="display:none">
+        <div id="tc-alerta-fijos"></div>
+        <div class="mes-nav">
+          <button onclick="cambiarMesFijos(-1)">‹</button>
+          <span class="mes-title" id="mes-fijos-title"></span>
+          <button onclick="cambiarMesFijos(1)">›</button>
+        </div>
+        <div class="total-row">
+          <span style="font-size:12px;color:var(--text2)">Total fijos</span>
+          <div style="text-align:right">
+            <strong id="tot-fijos" style="font-size:16px;font-weight:700"></strong>
+            <div style="font-size:10px;color:var(--text2)" id="tot-fijos-usd"></div>
+          </div>
+        </div>
+        <div class="prog-bg"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+        <div class="prog-meta"><span id="prog-txt">0 de 0 pagados</span><span id="prog-pend"></span></div>
+        <div class="card" id="lista-fijos"><div class="loading">⏳ Cargando…</div></div>
+      </div>
     </div>
   </div><!-- end content -->
 
   <nav class="bottom-nav">
     <button class="bnav-item active" onclick="goScreen('nuevo',this)">
       <span class="bnav-icon">➕</span><span class="bnav-label">Nuevo</span>
-    </button>
-    <button class="bnav-item" onclick="goScreen('fijos',this)">
-      <span class="bnav-icon">📌</span><span class="bnav-label">Fijos</span>
     </button>
     <button class="bnav-item" onclick="goScreen('tc',this)">
       <span class="bnav-icon">💱</span><span class="bnav-label">T/C</span>
@@ -410,10 +427,8 @@ const ML=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Set
 let pctState={}, onState={}, esDolar=false, marFil='all';
 let gsData={variables:[],fijos:[],tipo_cambio:[]};  // data from Google Sheets
 let mesFijosActual='';
-// Datos de cada fijo renderizado, indexados por posición. Evita tener que
-// interpolar texto arbitrario (nombre, categoría) dentro de atributos HTML
-// como onclick="...", que rompía el parseo si el texto traía comillas.
-let _fijoClickData=[];
+// Naturaleza seleccionada en el formulario único de "Nuevo": VARIABLE o FIJO.
+let naturalezaActual='VARIABLE';
 
 PERSONAS.forEach(p=>{pctState[p.id]=p.pct; onState[p.id]=p.on;});
 
@@ -514,8 +529,8 @@ async function syncFromSheets(){
       gsData.tipo_cambio = Object.entries(gsData.tipo_cambio).map(([mes_ym,tc])=>({mes_ym,tc:S(tc)}));
     }
     // El backend devuelve la lista de fijos bajo la clave "fijos_estado", pero el
-    // resto del código (toggleFijo, renderFijos) usa "gsData.fijos". Sin este alias,
-    // gsData.fijos queda undefined y .filter()/.find() rompen la pantalla de Fijos.
+    // resto del código (guardarFijoDesdeForm, renderFijos) usa "gsData.fijos". Sin
+    // este alias, gsData.fijos queda undefined y .filter()/.find() rompen la app.
     gsData.fijos = gsData.fijos_estado || gsData.fijos || [];
     setSyncDot('✓ Sincronizado','#34D399');
     setTimeout(()=>setSyncDot('',''),2000);
@@ -592,6 +607,58 @@ function updatePctBadge(){
   b.className='pct-pill '+(Math.abs(tot-100)<0.6?'ok':'warn');
 }
 
+// ── Naturaleza: Variable / Fijo (formulario único) ────────────────
+// Antes había una pantalla aparte ("Fijos") con un checklist de pagado/pendiente.
+// Ahora todo se registra desde este mismo formulario; el checklist quedó como
+// vista de solo lectura dentro de Reportes → Fijos (ver renderFijos()).
+function setNaturaleza(nat){
+  naturalezaActual=nat;
+  document.querySelectorAll('#nat-toggle .nat-tab').forEach(b=>b.classList.toggle('active', b.dataset.nat===nat));
+  const esFijo=nat==='FIJO';
+  document.getElementById('card-fijo-sel').style.display=esFijo?'block':'none';
+  document.getElementById('card-fecha-desc').style.display=esFijo?'none':'block';
+  document.getElementById('card-cierre').style.display=esFijo?'none':'block';
+  const rowMT=document.getElementById('row-monto-total');
+  if(rowMT) rowMT.style.display=esFijo?'none':'block';
+  const btn=document.getElementById('btn-guardar');
+  if(btn) btn.innerHTML=esFijo?'💾 Guardar fijo':'💾 Guardar gasto';
+  if(esFijo){
+    fillFijoCatSelect();
+    const mesInp=document.getElementById('inp-fijo-mes');
+    if(mesInp && !mesInp.value) mesInp.value=nowYM();
+  }
+}
+function fillFijoCatSelect(){
+  const sel=document.getElementById('inp-fijo-cat');
+  if(!sel || sel.dataset.filled) return;
+  (HISTORICO.catalogo_fijos||[]).forEach((f,i)=>{
+    const o=document.createElement('option');
+    o.value=i;
+    o.textContent=f.nombre+' ('+(f.categoria||'—')+')';
+    sel.appendChild(o);
+  });
+  sel.dataset.filled='1';
+}
+function onFijoCatChange(){
+  const sel=document.getElementById('inp-fijo-cat');
+  const idx=sel.value;
+  if(idx==='') return;
+  const f=(HISTORICO.catalogo_fijos||[])[idx];
+  if(!f) return;
+  esDolar=f.moneda==='DÓLARES';
+  document.getElementById('monto-lbl').textContent=esDolar?'Monto en $ USD':'Monto S/';
+  document.getElementById('inp-monto').value=f.monto;
+  onMontoChange();
+  // Precarga la división según el catálogo (mariana/gary); el resto queda apagado.
+  // Sigue siendo editable por si el reparto de ese mes cambia.
+  PERSONAS.forEach(p=>{
+    if(p.id==='mariana'){onState[p.id]=true;pctState[p.id]=S(f.mariana_pct)||0;}
+    else if(p.id==='gary'){onState[p.id]=true;pctState[p.id]=S(f.gary_pct)||0;}
+    else {onState[p.id]=false;pctState[p.id]=0;}
+  });
+  buildPersonas();
+}
+
 // Red de seguridad absoluta: crea un banner rojo directo en <body>, sin depender
 // de ningún elemento que pudiera faltar o estar mal enlazado. Así, sin importar
 // qué falle, SIEMPRE se ve algo en pantalla en vez de quedar en silencio total.
@@ -619,6 +686,7 @@ window.addEventListener('unhandledrejection', function(ev){
 });
 
 async function guardarGasto(){
+  if(naturalezaActual==='FIJO') return guardarFijoDesdeForm();
   try{
     const montoIng=S(document.getElementById('inp-monto').value);
     const errEl=document.getElementById('guardar-error');
@@ -710,6 +778,72 @@ async function guardarGasto(){
   }
 }
 
+// Guarda un gasto FIJO desde el formulario único (reemplaza el antiguo checklist
+// interactivo de la pantalla "Fijos"). Reusa el mismo card de Monto y de División
+// que Variable, pero toma nombre/categoría/medio/moneda del catálogo elegido.
+async function guardarFijoDesdeForm(){
+  const btn=document.getElementById('btn-guardar');
+  try{
+    const sel=document.getElementById('inp-fijo-cat');
+    const errEl=document.getElementById('guardar-error');
+    if(!sel || sel.value===''){
+      mostrarErrorFatal('Elige a qué gasto fijo corresponde este registro.');
+      return;
+    }
+    const f=(HISTORICO.catalogo_fijos||[])[sel.value];
+    if(!f){ mostrarErrorFatal('No se encontró el gasto fijo seleccionado.'); return; }
+    const montoIng=S(document.getElementById('inp-monto').value);
+    if(!montoIng||montoIng<=0){
+      if(errEl){errEl.style.display='block';errEl.textContent='⚠️ Ingresa un monto mayor a 0.';setTimeout(()=>errEl.style.display='none',3000);}
+      else mostrarErrorFatal('Ingresa un monto mayor a 0.');
+      document.getElementById('inp-monto').focus();
+      return;
+    }
+    if(errEl) errEl.style.display='none';
+    const mesFijo=document.getElementById('inp-fijo-mes').value||nowYM();
+    const totPct=PERSONAS.reduce((s,p)=>s+(onState[p.id]?(pctState[p.id]||0):0),0);
+    if(Math.abs(totPct-100)>0.6){mostrarErrorFatal('Los % deben sumar 100% (ahora suman '+totPct.toFixed(1)+'%).');return;}
+    if(btn){btn.innerHTML='<span class="spinner"></span> Guardando…'; btn.disabled=true;}
+    const mPct=onState['mariana']?(pctState['mariana']||0):0;
+    const gPct=onState['gary']?(pctState['gary']||0):0;
+    const id=f.id+'_'+mesFijo;
+    const body={action:'save_fijo', id, mes_ym:mesFijo, nombre:f.nombre, categoria:f.categoria, medio:f.medio,
+      moneda:f.moneda, monto:montoIng, pagado:true, fecha_pago:todayISO(),
+      mariana_pct:mPct, gary_pct:gPct, miguel_pct:0, tercero_pct:0, elena_pct:0,
+      mariana_monto:parseFloat((montoIng*mPct/100).toFixed(2)), gary_monto:parseFloat((montoIng*gPct/100).toFixed(2)),
+      miguel_monto:0, tercero_monto:0, elena_monto:0};
+    const res=await apiPost(body);
+    if(res && res.ok){
+      if(errEl){
+        errEl.style.display='block';
+        errEl.style.background='var(--green-bg,#D1FAE5)';
+        errEl.style.color='var(--green-dark,#065F46)';
+        errEl.textContent='✅ Fijo guardado correctamente en Google Sheets.';
+        setTimeout(()=>{errEl.style.display='none';errEl.style.background='';errEl.style.color='';},3500);
+      }
+      const existing=gsData.fijos.find(x=>x.id===id);
+      if(existing) Object.assign(existing, body); else gsData.fijos.push(body);
+      document.getElementById('inp-monto').value='';
+      sel.value='';
+      if(btn){btn.innerHTML='✅ ¡Guardado!'; btn.style.background='var(--green)';
+        setTimeout(()=>{btn.innerHTML='💾 Guardar fijo';btn.style.background='';btn.disabled=false;},2000);}
+    }else{
+      const msg=(res&&res.error)||'No se pudo guardar. Usa el botón "Probar conexión" para diagnosticar.';
+      if(errEl){
+        errEl.style.display='block';
+        errEl.style.background='var(--red-bg,#FEE2E2)';
+        errEl.style.color='var(--red,#DC2626)';
+        errEl.textContent='❌ '+msg;
+      } else mostrarErrorFatal(msg);
+      if(btn){btn.innerHTML='💾 Guardar fijo'; btn.disabled=false;}
+    }
+  }catch(e){
+    const msg=(e&&e.message)?e.message:String(e);
+    if(btn){btn.innerHTML='💾 Guardar fijo'; btn.disabled=false;}
+    mostrarErrorFatal('Error inesperado al guardar fijo: '+msg);
+  }
+}
+
 // ── TC ───────────────────────────────────────
 function renderTCBar(id){
   const el=document.getElementById(id);if(!el)return;
@@ -717,9 +851,9 @@ function renderTCBar(id){
   el.innerHTML=tc
     ?`<div class="tc-bar"><span style="font-size:12px;font-weight:500;color:var(--blue-dk)">💱 TC ${mLL(nowYM())}</span>
        <span style="font-size:15px;font-weight:700;color:var(--blue-dk)">S/ ${tc.toFixed(3)}</span>
-       <button class="btn-sm" onclick="goScreen('tc',document.querySelector('.bnav-item:nth-child(3)'))">Cambiar</button></div>`
+       <button class="btn-sm" onclick="goScreen('tc',document.querySelector('.bnav-item:nth-child(2)'))">Cambiar</button></div>`
     :`<div class="tc-alerta">⚠️ Sin TC para ${mLL(nowYM())}.
-       <button class="btn-sm" style="background:var(--amber-bg);border-color:#FCD34D;margin-left:auto" onclick="goScreen('tc',document.querySelector('.bnav-item:nth-child(3)'))">Ingresar</button></div>`;
+       <button class="btn-sm" style="background:var(--amber-bg);border-color:#FCD34D;margin-left:auto" onclick="goScreen('tc',document.querySelector('.bnav-item:nth-child(2)'))">Ingresar</button></div>`;
 }
 function renderTC(){
   // Igual que en getTCMes: lo guardado en este dispositivo (mfg-tc) manda sobre lo
@@ -800,41 +934,12 @@ async function guardarTC(){
   }
 }
 
-// ── Fijos ────────────────────────────────────
+// ── Fijos (vista de solo lectura en Reportes; el registro se hace en ➕ Nuevo) ──
 function cambiarMesFijos(d){mesFijosActual=addM(mesFijosActual,d);renderFijos();}
-function toggleFijoByIdx(idx){
-  const d=_fijoClickData[idx];
-  if(!d) return;
-  toggleFijo(d.id,d.nombre,d.categoria,d.medio,d.moneda,d.monto,d.mesFijo,d.marianaPct,d.garyPct);
-}
-async function toggleFijo(id,nombre,categoria,medio,moneda,monto,mesFijo,marianaPct,garyPct){
-  try{
-    // Find in gsData or create new
-    let fijo=gsData.fijos.find(f=>f.id===id);
-    const newPagado=fijo?!fijo.pagado:true;
-    const fechaPago=newPagado?todayISO():'';
-    // mariana_pct/gary_pct vienen del catálogo (definidos en el Excel original); los
-    // demás (miguel/tercero/elena) no se calculan hoy para fijos, quedan en 0.
-    const mPct=S(marianaPct), gPct=S(garyPct);
-    const body={action:'save_fijo',id,mes_ym:mesFijo,nombre,categoria,medio,moneda,monto,pagado:newPagado,fecha_pago:fechaPago,
-      mariana_pct:mPct, gary_pct:gPct, miguel_pct:0, tercero_pct:0, elena_pct:0,
-      mariana_monto:parseFloat((monto*mPct/100).toFixed(2)), gary_monto:parseFloat((monto*gPct/100).toFixed(2)),
-      miguel_monto:0, tercero_monto:0, elena_monto:0};
-    const res=await apiPost(body);
-    if(res.ok){
-      if(fijo){fijo.pagado=newPagado;fijo.fecha_pago=fechaPago;}
-      else gsData.fijos.push({id,mes_ym:mesFijo,nombre,categoria,medio,moneda,monto,pagado:newPagado,fecha_pago:fechaPago});
-      renderFijos();
-    } else {
-      mostrarErrorFatal('No se pudo guardar el fijo: '+(res.error||res.message||'error desconocido'));
-    }
-  }catch(e){
-    mostrarErrorFatal('Error inesperado al guardar fijo: '+(e&&e.message?e.message:e));
-  }
-}
 function renderFijos(){
-  _fijoClickData=[];
-  document.getElementById('mes-fijos-title').textContent=mLL(mesFijosActual);
+  const elTitle=document.getElementById('mes-fijos-title');
+  if(!elTitle) return; // la pestaña de Reportes aún no está en el DOM en este render
+  elTitle.textContent=mLL(mesFijosActual);
   renderTCBar('tc-alerta-fijos');
   const tc=getTCMes(mesFijosActual)||1;
   // Get catalog for this month
@@ -872,11 +977,8 @@ function renderFijos(){
       const sub=grps[g].reduce((s,f)=>s+f.montoSoles,0);
       h+=`<div class="cat-grp"><span>${g}</span><span>S/ ${sub.toFixed(2)}</span></div>`;
       grps[g].forEach(f=>{
-        const _idx=_fijoClickData.push({id:f.id,nombre:f.nombre,categoria:f.categoria,medio:f.medio,
-          moneda:f.moneda,monto:f.monto,mesFijo:mesFijosActual,marianaPct:f.mariana_pct||0,garyPct:f.gary_pct||0})-1;
         h+=`<div class="fijo-row">
-          <div class="fijo-check ${f.pagado?'paid':''}"
-            onclick="toggleFijoByIdx(${_idx})">${f.pagado?'✓':''}</div>
+          <div class="fijo-check ${f.pagado?'paid':''}">${f.pagado?'✓':''}</div>
           <div class="fijo-info">
             <div class="fijo-nombre ${f.pagado?'paid':''}">${f.nombre}</div>
             <div class="fijo-sub">${f.medio||'—'}${f.moneda==='DÓLARES'?' 💵':''}${f.pagado&&f.fechaPago?' · Pagado '+dL(f.fechaPago):''}</div>
@@ -908,6 +1010,7 @@ function setRepTab(tab,btn){
   if(tab==='mariana') renderMariana();
   else if(tab==='gary') renderGary();
   else if(tab==='pension') renderPension();
+  else if(tab==='fijos') renderFijos();
 }
 
 // ── Mamá grupos ──────────────────────────────
@@ -1194,7 +1297,6 @@ function goScreen(s,btn){
   document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-'+s).classList.add('active');
   if(btn)btn.classList.add('active');
-  if(s==='fijos')renderFijos();
   if(s==='tc')renderTC();
   if(s==='reportes')renderMariana();
 }
@@ -1218,7 +1320,8 @@ async function init(){
   document.getElementById('inp-fecha').value=hoy; onFechaChange();
   document.getElementById('inp-cierre').value=nowYM();
   document.getElementById('tc-mes').value=nowYM();
-  fillCats(); buildPersonas(); buildPptoMeses();
+  document.getElementById('inp-fijo-mes').value=nowYM();
+  fillCats(); fillFijoCatSelect(); buildPersonas(); buildPptoMeses();
   renderTCBar('tc-alerta-fijos'); renderTCBar('tc-alerta-var');
   renderFijos(); renderTC();
   // Sync from Google Sheets in background
