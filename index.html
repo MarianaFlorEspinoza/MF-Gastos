@@ -410,6 +410,10 @@ const ML=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Set
 let pctState={}, onState={}, esDolar=false, marFil='all';
 let gsData={variables:[],fijos:[],tipo_cambio:[]};  // data from Google Sheets
 let mesFijosActual='';
+// Datos de cada fijo renderizado, indexados por posición. Evita tener que
+// interpolar texto arbitrario (nombre, categoría) dentro de atributos HTML
+// como onclick="...", que rompía el parseo si el texto traía comillas.
+let _fijoClickData=[];
 
 PERSONAS.forEach(p=>{pctState[p.id]=p.pct; onState[p.id]=p.on;});
 
@@ -798,26 +802,38 @@ async function guardarTC(){
 
 // ── Fijos ────────────────────────────────────
 function cambiarMesFijos(d){mesFijosActual=addM(mesFijosActual,d);renderFijos();}
+function toggleFijoByIdx(idx){
+  const d=_fijoClickData[idx];
+  if(!d) return;
+  toggleFijo(d.id,d.nombre,d.categoria,d.medio,d.moneda,d.monto,d.mesFijo,d.marianaPct,d.garyPct);
+}
 async function toggleFijo(id,nombre,categoria,medio,moneda,monto,mesFijo,marianaPct,garyPct){
-  // Find in gsData or create new
-  let fijo=gsData.fijos.find(f=>f.id===id);
-  const newPagado=fijo?!fijo.pagado:true;
-  const fechaPago=newPagado?todayISO():'';
-  // mariana_pct/gary_pct vienen del catálogo (definidos en el Excel original); los
-  // demás (miguel/tercero/elena) no se calculan hoy para fijos, quedan en 0.
-  const mPct=S(marianaPct), gPct=S(garyPct);
-  const body={action:'save_fijo',id,mes_ym:mesFijo,nombre,categoria,medio,moneda,monto,pagado:newPagado,fecha_pago:fechaPago,
-    mariana_pct:mPct, gary_pct:gPct, miguel_pct:0, tercero_pct:0, elena_pct:0,
-    mariana_monto:parseFloat((monto*mPct/100).toFixed(2)), gary_monto:parseFloat((monto*gPct/100).toFixed(2)),
-    miguel_monto:0, tercero_monto:0, elena_monto:0};
-  const res=await apiPost(body);
-  if(res.ok){
-    if(fijo){fijo.pagado=newPagado;fijo.fecha_pago=fechaPago;}
-    else gsData.fijos.push({id,mes_ym:mesFijo,nombre,categoria,medio,moneda,monto,pagado:newPagado,fecha_pago:fechaPago});
-    renderFijos();
+  try{
+    // Find in gsData or create new
+    let fijo=gsData.fijos.find(f=>f.id===id);
+    const newPagado=fijo?!fijo.pagado:true;
+    const fechaPago=newPagado?todayISO():'';
+    // mariana_pct/gary_pct vienen del catálogo (definidos en el Excel original); los
+    // demás (miguel/tercero/elena) no se calculan hoy para fijos, quedan en 0.
+    const mPct=S(marianaPct), gPct=S(garyPct);
+    const body={action:'save_fijo',id,mes_ym:mesFijo,nombre,categoria,medio,moneda,monto,pagado:newPagado,fecha_pago:fechaPago,
+      mariana_pct:mPct, gary_pct:gPct, miguel_pct:0, tercero_pct:0, elena_pct:0,
+      mariana_monto:parseFloat((monto*mPct/100).toFixed(2)), gary_monto:parseFloat((monto*gPct/100).toFixed(2)),
+      miguel_monto:0, tercero_monto:0, elena_monto:0};
+    const res=await apiPost(body);
+    if(res.ok){
+      if(fijo){fijo.pagado=newPagado;fijo.fecha_pago=fechaPago;}
+      else gsData.fijos.push({id,mes_ym:mesFijo,nombre,categoria,medio,moneda,monto,pagado:newPagado,fecha_pago:fechaPago});
+      renderFijos();
+    } else {
+      mostrarErrorFatal('No se pudo guardar el fijo: '+(res.error||res.message||'error desconocido'));
+    }
+  }catch(e){
+    mostrarErrorFatal('Error inesperado al guardar fijo: '+(e&&e.message?e.message:e));
   }
 }
 function renderFijos(){
+  _fijoClickData=[];
   document.getElementById('mes-fijos-title').textContent=mLL(mesFijosActual);
   renderTCBar('tc-alerta-fijos');
   const tc=getTCMes(mesFijosActual)||1;
@@ -856,9 +872,11 @@ function renderFijos(){
       const sub=grps[g].reduce((s,f)=>s+f.montoSoles,0);
       h+=`<div class="cat-grp"><span>${g}</span><span>S/ ${sub.toFixed(2)}</span></div>`;
       grps[g].forEach(f=>{
+        const _idx=_fijoClickData.push({id:f.id,nombre:f.nombre,categoria:f.categoria,medio:f.medio,
+          moneda:f.moneda,monto:f.monto,mesFijo:mesFijosActual,marianaPct:f.mariana_pct||0,garyPct:f.gary_pct||0})-1;
         h+=`<div class="fijo-row">
           <div class="fijo-check ${f.pagado?'paid':''}"
-            onclick="toggleFijo('${f.id}','${f.nombre.replace(/'/g,"\'")}',${JSON.stringify(f.categoria)},${JSON.stringify(f.medio)},'${f.moneda}',${f.monto},'${mesFijosActual}',${f.mariana_pct||0},${f.gary_pct||0})">${f.pagado?'✓':''}</div>
+            onclick="toggleFijoByIdx(${_idx})">${f.pagado?'✓':''}</div>
           <div class="fijo-info">
             <div class="fijo-nombre ${f.pagado?'paid':''}">${f.nombre}</div>
             <div class="fijo-sub">${f.medio||'—'}${f.moneda==='DÓLARES'?' 💵':''}${f.pagado&&f.fechaPago?' · Pagado '+dL(f.fechaPago):''}</div>
