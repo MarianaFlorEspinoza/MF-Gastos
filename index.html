@@ -1443,6 +1443,13 @@ function renderHipo(){
 // renderMariana(). El mes actual va resaltado en amarillo suave.
 const PERSONA_LABEL={MARIANA:'Mariana',GARY:'Gary',TERCERO:'Tercero',MIGUEL:'Miguel',ELENA:'Elena'};
 
+// Grid compartido por TODAS las filas (encabezado, banda de titular y cada
+// tarjeta) para que las 3 columnas de mes midan exactamente lo mismo sin
+// importar cuánto texto tenga el desglose de "quién paga" — con flexbox
+// puro cada fila calculaba sus anchos por separado y el texto largo
+// desalineaba las columnas entre filas.
+const TARJ_GRID='display:grid;grid-template-columns:100px repeat(3,minmax(0,1fr));column-gap:2px;align-items:start';
+
 function renderTarjetas(){
   const wrap=document.getElementById('tarjetas-content');
   const subEl=document.getElementById('tarjetas-subtitle');
@@ -1471,10 +1478,10 @@ function renderTarjetas(){
   };
 
   let html=`
-  <div style="display:flex;align-items:center;padding:4px 6px 3px">
-    <div style="flex:0 0 108px;font-size:9px;font-weight:600;color:var(--text2);text-transform:uppercase">Tarjeta</div>
+  <div style="${TARJ_GRID};padding:4px 6px 3px">
+    <div style="font-size:9px;font-weight:600;color:var(--text2);text-transform:uppercase">Tarjeta</div>
     ${meses.map((m,i)=>{const isCur=i===curIdx;const lbl=m.mes.split(' ')[0];
-      return `<div style="flex:1;text-align:right;font-size:9px;font-weight:700;text-transform:uppercase;padding:2px 3px;background:${isCur?'#B45309':'transparent'};color:${isCur?'#fff':'var(--text2)'}">${lbl}${isCur?' ★':''}</div>`;
+      return `<div style="text-align:right;font-size:9px;font-weight:700;text-transform:uppercase;padding:2px 3px;background:${isCur?'#B45309':'transparent'};color:${isCur?'#fff':'var(--text2)'};border-radius:3px">${lbl}${isCur?' ★':''}</div>`;
     }).join('')}
   </div>`;
 
@@ -1486,11 +1493,10 @@ function renderTarjetas(){
     const sumsSoles=meses.map(m=>cats.reduce((s,c)=>{ if(c.moneda!=='SOLES') return s; const r=lookup[m.mes_ym][c.tipo]; return s+(r?r.total:0); },0));
     const sumsDolar=meses.map(m=>cats.reduce((s,c)=>{ if(c.moneda!=='DOLARES') return s; const r=lookup[m.mes_ym][c.tipo]; return s+(r?r.total:0); },0));
 
-    html+=`<div style="display:flex;align-items:center;padding:7px 6px;border-radius:8px;margin-top:8px;background:#334155">
-      <span style="font-size:14px;margin-right:5px">${tit.icon}</span>
-      <div style="flex:0 0 78px;font-size:12px;font-weight:600;color:#fff">${tit.label}</div>
+    html+=`<div style="${TARJ_GRID};padding:7px 6px;border-radius:8px;margin-top:8px;background:#334155">
+      <div style="font-size:12px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tit.icon} ${tit.label}</div>
       ${meses.map((m,i)=>{const isCur=i===curIdx;
-        return `<div style="flex:1;text-align:right;font-size:10px;font-weight:600;color:${isCur?'#FCD34D':'rgba(255,255,255,.85)'};font-family:var(--mono)">S/${Math.round(sumsSoles[i]).toLocaleString('es-PE')}${sumsDolar[i]?' +$'+Math.round(sumsDolar[i]).toLocaleString('es-PE'):''}</div>`;
+        return `<div style="text-align:right;font-size:10px;font-weight:600;color:${isCur?'#FCD34D':'rgba(255,255,255,.85)'};font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">S/${Math.round(sumsSoles[i]).toLocaleString('es-PE')}${sumsDolar[i]?' +$'+Math.round(sumsDolar[i]).toLocaleString('es-PE'):''}</div>`;
       }).join('')}
     </div>`;
 
@@ -1500,21 +1506,22 @@ function renderTarjetas(){
       const esDual=c.tarjeta==='VISA' && cats.some(x=>x.tarjeta==='VISA'&&x.moneda==='DOLARES') && cats.some(x=>x.tarjeta==='VISA'&&x.moneda==='SOLES');
       const nombre=c.tarjeta+(esDual?(c.moneda==='DOLARES'?' (dól.)':' (soles)'):'');
 
-      html+=`<div style="display:flex;align-items:flex-start;padding:4px 6px;border-radius:4px" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background='transparent'">
-        <div style="flex:0 0 108px;min-width:0;padding-top:2px">
-          <div style="font-size:10px;color:var(--text2);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nombre}${c.moneda==='DOLARES'?' <span class="badge badge-usd" style="font-size:7px">USD</span>':''}</div>
+      html+=`<div style="${TARJ_GRID};padding:4px 6px;border-radius:4px" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background='transparent'">
+        <div style="min-width:0;padding-top:2px">
+          <div style="font-size:10px;color:var(--text2);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nombre}</div>
+          ${c.moneda==='DOLARES'?'<span class="badge badge-usd" style="font-size:7px">USD</span>':''}
         </div>
         ${vals.map((r,i)=>{
           const isCur=i===curIdx;
           const yBg=isCur?'#FFFBEB':'transparent';
-          if(!r) return `<div style="flex:1;text-align:right;font-size:10px;color:var(--text3);background:${yBg}">—</div>`;
+          if(!r) return `<div style="text-align:right;font-size:10px;color:var(--text3);background:${yBg};min-width:0">—</div>`;
           const personas=Object.entries(r.personas||{});
           const detalle=personas.length>1
-            ? personas.map(([p,v])=>(PERSONA_LABEL[p]||p).slice(0,3)+' '+f2(v,r.moneda)).join(' · ')
+            ? personas.map(([p,v])=>`<div style="font-size:8px;color:var(--text3);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(PERSONA_LABEL[p]||p).slice(0,3)} ${f2(v,r.moneda)}</div>`).join('')
             : '';
-          return `<div style="flex:1;text-align:right;background:${yBg}">
+          return `<div style="text-align:right;background:${yBg};min-width:0">
             <div style="font-size:10px;font-weight:600;color:var(--navy);font-family:var(--mono)">${f2(r.total,r.moneda)}</div>
-            ${detalle?`<div style="font-size:8px;color:var(--text3);white-space:nowrap">${detalle}</div>`:''}
+            ${detalle}
           </div>`;
         }).join('')}
       </div>`;
