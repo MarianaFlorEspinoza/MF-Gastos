@@ -1495,8 +1495,11 @@ function renderTarjetas(){
 
     html+=`<div style="${TARJ_GRID};padding:7px 6px;border-radius:8px;margin-top:8px;background:#334155">
       <div style="font-size:12px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tit.icon} ${tit.label}</div>
-      ${meses.map((m,i)=>{const isCur=i===curIdx;
-        return `<div style="text-align:right;font-size:10px;font-weight:600;color:${isCur?'#FCD34D':'rgba(255,255,255,.85)'};font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">S/${Math.round(sumsSoles[i]).toLocaleString('es-PE')}${sumsDolar[i]?' +$'+Math.round(sumsDolar[i]).toLocaleString('es-PE'):''}</div>`;
+      ${meses.map((m,i)=>{const isCur=i===curIdx;const color=isCur?'#FCD34D':'rgba(255,255,255,.85)';
+        return `<div style="text-align:right;min-width:0">
+          <div style="font-size:10px;font-weight:600;color:${color};font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">S/${Math.round(sumsSoles[i]).toLocaleString('es-PE')}</div>
+          ${sumsDolar[i]?`<div style="font-size:8px;font-weight:600;color:${color};font-family:var(--mono);opacity:.8;white-space:nowrap">+$${Math.round(sumsDolar[i]).toLocaleString('es-PE')}</div>`:''}
+        </div>`;
       }).join('')}
     </div>`;
 
