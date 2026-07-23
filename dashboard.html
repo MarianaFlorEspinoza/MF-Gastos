@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MF Gastos — Dashboard</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 :root{
   --navy:#0F1D35;--navy2:#1E3A5F;--navy3:#2D5282;
   --ice:#F0F5FF;--ice2:#E8F0FE;
@@ -18,7 +18,7 @@
   --border:#E2E8F0;--border2:#CBD5E1;
   --shadow:0 1px 3px rgba(0,0,0,.08);
   --radius:10px;--radius-sm:6px;
-  --font:'Inter',system-ui,sans-serif;
+  --font:'Nunito',system-ui,sans-serif;
   --mono:'JetBrains Mono',monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -397,28 +397,28 @@ function buildMariana(){
       return `<div style="flex:1;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;padding:3px 4px;background:${isCur?'#B45309':'transparent'};color:${isCur?'#fff':'var(--slate2)'};">${lbl}${isCur?' ★':''}</div>`;
     }).join('')}
   </div>
-  <div style="display:flex;align-items:center;padding:3px 8px;background:#1E3A5F;border-top:2px solid var(--border2);border-bottom:1px solid #162D4A">
+  <div style="display:flex;align-items:center;padding:3px 8px;background:#0099CC;border-top:2px solid #007BAD;border-bottom:1px solid #007BAD">
     <div style="flex:0 0 186px;font-size:12px;font-weight:700;color:#fff;padding:1px 4px">Total de Ingresos</div>
     ${WIN5.map((m,i)=>{const lbl=m.split(' ')[0];const ing=(lbl==='Jul'||lbl==='Dic')?17300:7300;
       return `<div style="flex:1;text-align:right;font-size:12px;font-weight:700;color:#fff;font-family:var(--mono,monospace);padding:1px 4px">${f2(ing)}</div>`;
     }).join('')}
   </div>
-  <div style="display:flex;align-items:center;padding:3px 8px;background:#C2410C;border-top:1px solid #9A3412;border-bottom:1px solid #9A3412">
+  <div style="display:flex;align-items:center;padding:3px 8px;background:#E06344;border-top:1px solid #C5543A;border-bottom:1px solid #C5543A">
     <div style="flex:0 0 186px;font-size:12px;font-weight:700;color:#fff;padding:1px 4px">Total de Egresos</div>
     ${WIN5.map((m,i)=>{const isCur=i===CUR_IDX;const tot=moFijo[i]+moVar[i];
       return `<div style="flex:1;text-align:right;font-size:12px;font-weight:700;color:#fff;font-family:var(--mono,monospace);padding:1px 4px">${f2(tot)}</div>`;
     }).join('')}
   </div>
-  <div style="display:flex;align-items:center;padding:3px 8px;background:#DBEAFE;border-bottom:1px solid #BFDBFE">
-    <div style="flex:0 0 186px;font-size:11px;font-weight:600;color:var(--blue-dark);padding:1px 4px">Fijos</div>
+  <div style="display:flex;align-items:center;padding:3px 8px;background:#E3F4FC;border-bottom:0.5px solid #B3DFF0">
+    <div style="flex:0 0 186px;font-size:11px;font-weight:600;color:#005580;padding:1px 4px">Fijos</div>
     ${WIN5.map((m,i)=>{const isCur=i===CUR_IDX;
-      return `<div style="flex:1;text-align:right;font-size:11px;font-weight:600;color:var(--blue-dark);font-family:var(--mono,monospace);padding:1px 4px">${f2(moFijo[i])}</div>`;
+      return `<div style="flex:1;text-align:right;font-size:11px;font-weight:600;color:#005580;font-family:var(--mono,monospace);padding:1px 4px">${f2(moFijo[i])}</div>`;
     }).join('')}
   </div>
-  <div style="display:flex;align-items:center;padding:3px 8px;background:#D1FAE5;border-bottom:1px solid var(--border2)">
-    <div style="flex:0 0 186px;font-size:11px;font-weight:600;color:var(--green-dark);padding:1px 4px">Variables</div>
+  <div style="display:flex;align-items:center;padding:3px 8px;background:#F3F4F6;border-bottom:0.5px solid #E5E7EB">
+    <div style="flex:0 0 186px;font-size:11px;font-weight:600;color:#374151;padding:1px 4px">Variables</div>
     ${WIN5.map((m,i)=>{const isCur=i===CUR_IDX;
-      return `<div style="flex:1;text-align:right;font-size:11px;font-weight:600;color:var(--green-dark);font-family:var(--mono,monospace);padding:1px 4px">${f2(moVar[i])}</div>`;
+      return `<div style="flex:1;text-align:right;font-size:11px;font-weight:600;color:#374151;font-family:var(--mono,monospace);padding:1px 4px">${f2(moVar[i])}</div>`;
     }).join('')}
   </div>
   <div style="display:flex;align-items:center;padding:3px 8px;background:#FEF3C7;border-top:1px solid #FDE68A;border-bottom:2px solid #FCD34D;margin-bottom:4px">
@@ -435,7 +435,7 @@ function buildMariana(){
     },0));
     const isOpen=MAR_OPEN.has(g.name);
 
-    html+=`<div onclick="marToggle('${g.name}')" style="display:flex;align-items:center;padding:7px 8px;cursor:pointer;border-radius:6px;margin-top:4px;background:#334155;border:1px solid #1E3A5F" onmouseenter="this.style.background='#1E3A5F'" onmouseleave="this.style.background='#334155'">
+    html+=`<div onclick="marToggle('${g.name}')" style="display:flex;align-items:center;padding:7px 8px;cursor:pointer;border-radius:6px;margin-top:4px;background:#374151;border:1px solid #2D3748" onmouseenter="this.style.background='#2D3748'" onmouseleave="this.style.background='#374151'">
       <span style="font-size:15px;margin-right:6px;flex-shrink:0">${g.icon}</span>
       <div style="flex:0 0 158px;font-size:13px;font-weight:600;color:#fff">${g.name}</div>
       ${sums.map((v,i)=>{
@@ -692,7 +692,7 @@ function buildPM(){
     }).join('');
 
     html+=`<div style="margin-bottom:8px;border-radius:8px;overflow:hidden;border:${isCur?'2px solid #B45309':'1px solid var(--border2)'}">
-      <div onclick="pmToggle(${mi})" style="display:flex;align-items:center;padding:10px 14px;cursor:pointer;background:${isCur?'#B45309':'#334155'};user-select:none">
+      <div onclick="pmToggle(${mi})" style="display:flex;align-items:center;padding:10px 14px;cursor:pointer;background:${isCur?'#B45309':'#374151'};user-select:none">
         <div style="flex:1">
           <div style="font-size:13px;font-weight:700;color:#fff">${mes}${isCur?' ★':''}</div>
           ${entry?`<div style="display:flex;gap:14px;margin-top:4px;flex-wrap:wrap">
@@ -780,7 +780,7 @@ function buildTarjetas(){
     const sumsSoles=meses.map(m=>cats.reduce((s,c)=>{ if(c.moneda!=='SOLES') return s; const r=lookup[m.mes_ym][c.tipo]; return s+(r?r.total:0); },0));
     const sumsDolar=meses.map(m=>cats.reduce((s,c)=>{ if(c.moneda!=='DOLARES') return s; const r=lookup[m.mes_ym][c.tipo]; return s+(r?r.total:0); },0));
 
-    html+=`<div style="${TARJ_GRID};padding:7px 8px;border-radius:6px;margin-top:10px;background:#334155">
+    html+=`<div style="${TARJ_GRID};padding:7px 8px;border-radius:6px;margin-top:10px;background:#374151">
       <div style="font-size:13px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tit.icon} ${tit.label}</div>
       ${meses.map((m,i)=>{const isCur=i===curIdx;const color=isCur?'#FCD34D':'rgba(255,255,255,.85)';
         return `<div style="text-align:right;min-width:0">
@@ -919,7 +919,7 @@ function renderLimites(ppto) {
     cats.forEach(c=>usadas.add(c));
 
     html += `<div class="lim-grupo">
-      <div class="lim-hdr" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#334155;border-radius:8px 8px 0 0">
+      <div class="lim-hdr" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#374151;border-radius:8px 8px 0 0">
         <span style="font-size:14px">${g.icon}</span>
         <span style="flex:1;font-size:12.5px;font-weight:600;color:#fff">${g.name}</span>
         <span style="font-size:12px;font-weight:600;color:#FCD34D;font-family:var(--mono,monospace)">S/ ${gTotal.toLocaleString('es-PE')}</span>
