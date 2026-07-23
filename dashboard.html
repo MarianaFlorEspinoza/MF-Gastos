@@ -397,22 +397,16 @@ function buildMariana(){
       return `<div style="flex:1;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;padding:3px 4px;background:${isCur?'#B45309':'transparent'};color:${isCur?'#fff':'var(--slate2)'};">${lbl}${isCur?' ★':''}</div>`;
     }).join('')}
   </div>
-  <div style="display:flex;align-items:center;padding:3px 8px;background:#065F46;border-top:2px solid var(--border2);border-bottom:1px solid #064E3B">
+  <div style="display:flex;align-items:center;padding:3px 8px;background:#1E3A5F;border-top:2px solid var(--border2);border-bottom:1px solid #162D4A">
     <div style="flex:0 0 186px;font-size:12px;font-weight:700;color:#fff;padding:1px 4px">Total de Ingresos</div>
     ${WIN5.map((m,i)=>{const lbl=m.split(' ')[0];const ing=(lbl==='Jul'||lbl==='Dic')?17300:7300;
       return `<div style="flex:1;text-align:right;font-size:12px;font-weight:700;color:#fff;font-family:var(--mono,monospace);padding:1px 4px">${f2(ing)}</div>`;
     }).join('')}
   </div>
-  <div style="display:flex;align-items:center;padding:3px 8px;background:#EFF6FF;border-top:1px solid var(--border2);border-bottom:1px solid var(--border2)">
-    <div style="flex:0 0 186px;font-size:12px;font-weight:700;color:var(--navy);padding:1px 4px">Total de Egresos</div>
+  <div style="display:flex;align-items:center;padding:3px 8px;background:#C2410C;border-top:1px solid #9A3412;border-bottom:1px solid #9A3412">
+    <div style="flex:0 0 186px;font-size:12px;font-weight:700;color:#fff;padding:1px 4px">Total de Egresos</div>
     ${WIN5.map((m,i)=>{const isCur=i===CUR_IDX;const tot=moFijo[i]+moVar[i];
-      return `<div style="flex:1;text-align:right;font-size:12px;font-weight:700;color:var(--navy);font-family:var(--mono,monospace);padding:1px 4px">${f2(tot)}</div>`;
-    }).join('')}
-  </div>
-  <div style="display:flex;align-items:center;padding:3px 8px;background:#F8FAFC;border-top:1px solid var(--border2);border-bottom:2px solid var(--border2);margin-bottom:4px">
-    <div style="flex:0 0 186px;font-size:12px;font-weight:700;color:var(--slate);padding:1px 4px">Saldo</div>
-    ${WIN5.map((m,i)=>{const lbl=m.split(' ')[0];const ing=(lbl==='Jul'||lbl==='Dic')?17300:7300;const tot=moFijo[i]+moVar[i];const bal=ing-tot;
-      return `<div style="flex:1;text-align:right;font-size:12px;font-weight:700;color:${bal<0?'var(--red)':'var(--green-dark)'};font-family:var(--mono,monospace);padding:1px 4px">${f2(bal)}</div>`;
+      return `<div style="flex:1;text-align:right;font-size:12px;font-weight:700;color:#fff;font-family:var(--mono,monospace);padding:1px 4px">${f2(tot)}</div>`;
     }).join('')}
   </div>
   <div style="display:flex;align-items:center;padding:3px 8px;background:#DBEAFE;border-bottom:1px solid #BFDBFE">
@@ -421,10 +415,16 @@ function buildMariana(){
       return `<div style="flex:1;text-align:right;font-size:11px;font-weight:600;color:var(--blue-dark);font-family:var(--mono,monospace);padding:1px 4px">${f2(moFijo[i])}</div>`;
     }).join('')}
   </div>
-  <div style="display:flex;align-items:center;padding:3px 8px;background:#D1FAE5;border-bottom:2px solid var(--border2);margin-bottom:4px">
+  <div style="display:flex;align-items:center;padding:3px 8px;background:#D1FAE5;border-bottom:1px solid var(--border2)">
     <div style="flex:0 0 186px;font-size:11px;font-weight:600;color:var(--green-dark);padding:1px 4px">Variables</div>
     ${WIN5.map((m,i)=>{const isCur=i===CUR_IDX;
       return `<div style="flex:1;text-align:right;font-size:11px;font-weight:600;color:var(--green-dark);font-family:var(--mono,monospace);padding:1px 4px">${f2(moVar[i])}</div>`;
+    }).join('')}
+  </div>
+  <div style="display:flex;align-items:center;padding:3px 8px;background:#FEF3C7;border-top:1px solid #FDE68A;border-bottom:2px solid #FCD34D;margin-bottom:4px">
+    <div style="flex:0 0 186px;font-size:12px;font-weight:700;color:#92400E;padding:1px 4px">Saldo</div>
+    ${WIN5.map((m,i)=>{const lbl=m.split(' ')[0];const ing=(lbl==='Jul'||lbl==='Dic')?17300:7300;const tot=moFijo[i]+moVar[i];const bal=ing-tot;
+      return `<div style="flex:1;text-align:right;font-size:12px;font-weight:700;color:${bal<0?'var(--red)':'var(--green-dark)'};font-family:var(--mono,monospace);padding:1px 4px">${f2(bal)}</div>`;
     }).join('')}
   </div>`;
 
