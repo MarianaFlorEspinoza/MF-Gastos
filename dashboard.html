@@ -327,7 +327,8 @@ function buildGary(){
 // ── MARIANA ──────────────────────────────────────────────────────
 const MAR_GRUPOS=[
   {name:'Financiero',icon:'💳',cats:[
-    {n:'FIJO',c:'PRESTAMO'},{n:'FIJO',c:'IMPUESTO'},{n:'FIJO',c:'SEGURO'}
+    {n:'FIJO',c:'PRESTAMO'},{n:'FIJO',c:'IMPUESTO'},{n:'FIJO',c:'SEGURO'},
+    {n:'FIJO',c:'AHORROS'},{n:'VARIABLE',c:'AHORROS'}
   ]},
   {name:'Hogar',icon:'🏠',cats:[
     {n:'FIJO',c:'SERVICIOS'},{n:'FIJO',c:'CASA VARIOS'},{n:'FIJO',c:'NANA'},
@@ -354,12 +355,9 @@ const MAR_GRUPOS=[
   ]},
   {name:'Regalos y eventos',icon:'🎁',cats:[
     {n:'FIJO',c:'DONACION'},{n:'VARIABLE',c:'CUMPLE'},{n:'VARIABLE',c:'REGALO'}
-  ]},
-  {name:'Ahorro',icon:'💰',cats:[
-    {n:'FIJO',c:'AHORROS'},{n:'VARIABLE',c:'AHORROS'}
   ]}
 ];
-const MAR_OPEN=new Set(['Financiero','Hogar','Carro','Mamá','Educación','Personal','Salidas','Regalos y eventos','Ahorro']);
+const MAR_OPEN=new Set(['Financiero','Hogar','Carro','Mamá','Educación','Personal','Salidas','Regalos y eventos']);
 
 function buildMariana(){
   const MC=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
@@ -886,7 +884,7 @@ function renderLimites(ppto) {
   };
   const EXTRA = new Set(['CARRO - TALLER','CUMPLE','LAPTOP','PRESTAMO','SERVICIOS']);
   const GRUPOS = [
-    {name:'Financiero', icon:'💳', cats:['PRESTAMO','IMPUESTO','SEGURO']},
+    {name:'Financiero', icon:'💳', cats:['PRESTAMO','IMPUESTO','SEGURO','AHORROS']},
     {name:'Hogar',      icon:'🏠', cats:['SERVICIOS','CASA SUPER','CASA VARIOS','COCINA','NANA']},
     {name:'Carro',      icon:'🚗', cats:['CARRO - PRESTAMO','CARRO - SEGURO','CARRO - COCHERA','CARRO - GASOLINA','CARRO - LIMPIEZA','CARRO - MANT','CARRO - TALLER']},
     {name:'Mamá',       icon:'👩', cats:['PENSION MAMA 50%']},
@@ -894,7 +892,6 @@ function renderLimites(ppto) {
     {name:'Personal',   icon:'💆', cats:['EGO','SALUD','FOTOGRAFIA','STARBUCKS','ROPA']},
     {name:'Salidas',    icon:'🎉', cats:['RESTAURANTE','SALIDA','TAXI']},
     {name:'Regalos y eventos', icon:'🎁', cats:['REGALO','CUMPLE']},
-    {name:'Ahorro',            icon:'💰', cats:['AHORROS']},
   ];
 
   const catKeys = Object.keys(ppto);
