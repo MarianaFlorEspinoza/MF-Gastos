@@ -303,7 +303,7 @@ td.zero{color:var(--text3)}
         <div id="personas-wrap"></div>
         <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between">
           <span style="font-size:12px;color:var(--text2)">Total asignado</span>
-          <span style="font-size:14px;font-weight:700" id="split-total">S/ 0.00</span>
+          <span style="font-size:14px;font-weight:700" id="split-total">0.00</span>
         </div>
       </div>
       <button class="btn btn-primary" id="btn-guardar" onclick="guardarGasto()">💾 Guardar gasto</button>
@@ -541,7 +541,7 @@ function buildPersonas(){
         id="pct-${p.id}" value="${on?pct:''}" placeholder="0" ${!on?'disabled':''}
         oninput="onPctChange('${p.id}')">
       <span style="font-size:11px;color:var(--text2)">%</span>
-      <span class="pamt" id="pamt-${p.id}" style="color:${p.color}">S/ ${(on?mxc*pct/100:0).toFixed(2)}</span>
+      <span class="pamt" id="pamt-${p.id}" style="color:${p.color}">${(on?mxc*pct/100:0).toFixed(2)}</span>
       <div class="toggle ${on?'on':''}" id="ptog-${p.id}" onclick="togglePer('${p.id}')"></div>
     </div>`;
   }).join('');
@@ -551,15 +551,15 @@ function togglePer(id){
   onState[id]=!onState[id];
   document.getElementById('ptog-'+id).classList.toggle('on',onState[id]);
   const inp=document.getElementById('pct-'+id);inp.disabled=!onState[id];
-  if(!onState[id]){pctState[id]=0;inp.value='';}else inp.value=pctState[id]||0;
+  if(!onState[id]){pctState[id]=0;inp.value='';}else{pctState[id]=100;inp.value=100;}
   recalcSplit();
 }
 function onPctChange(id){pctState[id]=S(document.getElementById('pct-'+id).value);recalcSplit();}
 function recalcSplit(){
   const mxc=mxcSoles();
-  PERSONAS.forEach(p=>{const el=document.getElementById('pamt-'+p.id);if(el)el.textContent='S/ '+(onState[p.id]?mxc*(pctState[p.id]||0)/100:0).toFixed(2);});
+  PERSONAS.forEach(p=>{const el=document.getElementById('pamt-'+p.id);if(el)el.textContent=(onState[p.id]?mxc*(pctState[p.id]||0)/100:0).toFixed(2);});
   const tot=PERSONAS.reduce((s,p)=>s+(onState[p.id]?mxc*(pctState[p.id]||0)/100:0),0);
-  const el=document.getElementById('split-total');if(el)el.textContent='S/ '+tot.toFixed(2);
+  const el=document.getElementById('split-total');if(el)el.textContent=tot.toFixed(2);
   updatePctBadge();
 }
 function updatePctBadge(){
