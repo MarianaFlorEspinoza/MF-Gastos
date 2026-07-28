@@ -303,8 +303,9 @@ function effectiveMonthLabel(){
 function buildGary(){
   const MC=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
   const curYear=effectiveNow().getFullYear().toString();
-  const curM=effectiveMonthLabel();
-  const curIdx=MC.indexOf(curM.split(' ')[0]);
+  const curM_real=currentMonthLabel();   // badge "Mes actual" = mes real
+  const curM_filter=effectiveMonthLabel(); // hasta qué mes mostrar (avanza el 25)
+  const curIdx=MC.indexOf(curM_filter.split(' ')[0]);
 
   const rows=DATA.gary
     .filter(r=>r.mes.includes(curYear))
@@ -316,7 +317,7 @@ function buildGary(){
 
   document.getElementById('gary-list').innerHTML=rows.map(r=>{
     const sal=S(r.saldo);
-    const isCur=r.mes===curM;
+    const isCur=r.mes===curM_real;
     const pct=Math.round(Math.max(S(r.saldo),0)/maxSal*100);
     const mesCorto=r.mes.replace(' '+curYear,'');
     return `<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:8px;border:1px solid ${isCur?'var(--amber)':'var(--border)'};background:${isCur?'var(--amber-bg)':'var(--white)'};margin-bottom:6px">
@@ -651,12 +652,13 @@ function buildHipo(){
 
 function buildPM(){
   const MC=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
+  const isLate=new Date().getDate()>=25;
   const now=effectiveNow();
   const WIN5=[0,-1,-2,-3,-4].map(off=>{
     const d=new Date(now.getFullYear(),now.getMonth()+off,1);
     return MC[d.getMonth()]+' '+d.getFullYear();
   });
-  const CUR_IDX=0;
+  const CUR_IDX=isLate?1:0; // si avanzamos mes, el mes real queda en posición 1
 
   const mesLookup={};
   DATA.pension_mama.forEach(m=>{ mesLookup[m.mes]=m; });
