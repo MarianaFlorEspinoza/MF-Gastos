@@ -830,6 +830,7 @@ async function guardarFijoDesdeForm(){
 // ── TC (pantalla eliminada — TC lo aplica el script Python) ──────
 function renderTCBar(id){ const el=document.getElementById(id);if(el)el.innerHTML=''; }
 function renderTC(){
+  if(!document.getElementById('tc-hist')) return; // pantalla TC eliminada
   // Igual que en getTCMes: lo guardado en este dispositivo (mfg-tc) manda sobre lo
   // que haya en Sheets para ese mes, porque es la edición más reciente del usuario.
   const allTC=gsData.tipo_cambio.filter(t=>{
@@ -1519,7 +1520,6 @@ async function init(){
   const hoy=todayISO();
   document.getElementById('inp-fecha').value=hoy; onFechaChange();
   document.getElementById('inp-cierre').value=nowYM();
-  document.getElementById('tc-mes').value=nowYM();
   document.getElementById('inp-fijo-mes').value=nowYM();
   fillCats(); fillFijoCatSelect(); buildPersonas(); buildPptoMeses();
   renderFijos();
