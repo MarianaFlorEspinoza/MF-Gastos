@@ -1380,7 +1380,7 @@ function renderHipo(){
   <div class="card">
     <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text2)">Saldo disponible hoy</div>
     <div style="font-size:24px;font-weight:700;color:var(--navy);margin-top:4px">${f2(h.saldo_disponible)}</div>
-    <div style="font-size:12px;color:var(--text2);margin-top:8px">Próximo descuento automático: <strong style="color:var(--navy)">${dL(h.fecha_descuento)}</strong> &nbsp;·&nbsp; Cuota de ${h.mes_actual}: ${f2(h.cuota_actual)}</div>
+    <div style="font-size:12px;color:var(--text2);margin-top:8px">Próximo descuento automático: <strong style="color:var(--navy)">${dL(h.fecha_descuento)}</strong> &nbsp;·&nbsp; Cuota de ${mL(nowYM())}: ${f2(h.cuota_actual)}</div>
 
     <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
       <div>
@@ -1447,7 +1447,7 @@ function renderTarjetas(){
     return;
   }
 
-  const curIdx=meses.findIndex(m=>m.es_actual);
+  const curIdx=(()=>{const ym=nowYM();const i=meses.findIndex(m=>m.mes_ym===ym);return i>=0?i:meses.findIndex(m=>m.es_actual);})();
   const lookup={};
   meses.forEach(m=>{ lookup[m.mes_ym]={}; (m.rows||[]).forEach(r=>{ lookup[m.mes_ym][r.tipo]=r; }); });
 
@@ -1547,6 +1547,14 @@ async function init(){
   syncFromSheets();
 }
 init();
+
+// Auto-reload when device wakes up on a new month (fixes stale month on iPhone)
+(function(){
+  const _loadedYM=nowYM();
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden && nowYM()!==_loadedYM) window.location.reload();
+  });
+})();
 </script>
 </body>
 </html>
